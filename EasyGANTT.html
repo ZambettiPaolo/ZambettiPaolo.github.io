@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progetti e Fasi</title>
+
+    <!-- Include Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="./EasyGANTT.js"></script>
+    <script type="text/javascript" src="./algorithm2.js"></script>
+    <style>
+        h2 {
+            text-align: center;
+            margin: 20px;
+        }
+       
+
+        .selected1 {
+            background-color: #007bff;
+        }
+        .selected2 {
+            background-color: #ffc107;
+        }
+        .selected3 {
+            background-color: #ffffff;
+            padding:0px;
+            margin: 0px;
+
+        }
+        
+        .rowBorder {
+            border: 0px;
+            padding:15px;
+            margin: 15px;
+        }
+        .noMargin{
+            margin: 0px;
+        }
+        .spreadsheet-table th,
+        .spreadsheet-table td {
+            text-align: left;
+            min-width: 10px;
+            height: 30px;
+            border: 1px solid #dee2e6;
+            padding: 2px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .no-wrap {
+            white-space: nowrap;
+    
+        }
+        .slider-container {
+            overflow-x: auto;
+  
+
+        }
+
+    </style>
+</head>
+<body >
+    <div style="background-color:rgb(197, 197, 197)" class="container-xxl ">
+    <div class="row">    
+    <div class="col-1 "></div>
+    <div class="col-10 ">
+        <div class="row">
+            <div class="col text-center">
+            <h1>EasyGANTT</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div >
+                <label src="./iconUpLoad.png "class="btn btn-light" for="uploadFile" style="margin-bottom: 0;">
+                    <img src="./iconUpLoad.png " alt="Upload Icon" width="24" height="24">
+                    Upload data</label>
+                <button class="btn btn-light" onclick="downloadJSON()">
+                    <img src="./iconDownLoad.png " alt="Upload Icon" width="24" height="24">
+                    Download data</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col  bg-light text-black">
+                <h2>Projects</h2>
+               
+                    <div class="row">
+                        <div class="col">
+                            <button class="btn btn-light" onclick="newProject()">New</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-light" onclick="upProject()">Up</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-light" onclick="downProject()">Down</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-light" onclick="deleteProject()">Delete</button>
+                        </div>
+                    </div>
+                    <div class="row table-container text-star">
+                            <table class="table" id="projectsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Delivery</th>
+                                        <th>Penalty</th>
+                                    </tr>
+                                </thead>
+                                <tbody onload="populateProjectsTable()">
+
+                                </tbody>
+                            </table>
+                        
+                    </div>
+                
+            </div>
+            <div class="col m-0 pl-6 pr-0 bg-primary text-white "  >
+                <h2>Phases</h2>
+               
+                    <div class="row">
+                        <div class="col">
+                            <button class="btn btn-primary" onclick="newPhase()">New</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-primary" onclick="upPhase()">Up</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-primary" onclick="downPhase()">Down</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-primary" onclick="deletePhase()">Delete</button>
+                        </div>
+                    </div>
+                    <div class="row-2 table-container">
+                        <table class="table text-star" id="phasesTable">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Start</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                            </tbody>
+                        </table>
+                    
+                </div>
+            </div>
+              <div class="col-3 bg-warning text-dark">
+                <h2>Resources</h2>
+               
+                    <div class="row">
+                        <div class="col">
+                            <button class="btn btn-warning" onclick="newResorce()">New</button>
+                        </div>
+                        <div class="col">
+                            
+                        </div>
+                        <div class="col">
+                            
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-warning" onclick="deleteResource()">Delete</button>
+                        </div>
+                    </div>
+                    <div class="row table-container text-star">
+                        <table class="table" id="resourcesTable">
+                            <thead>
+                                <tr>
+                                    <th>Resource</th>
+                                    <th>Employed %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<div class="row p-20">-</div>
+</div>
+<input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
+</div>
+
+<div class="row pm"><h2 class="">GANT CHART</h2></div>
+<div class="row pm" ><button class="btn btn-secondary" onclick="updateChart(new GANTT(data).getGantt())">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+      </svg>Redraw graph</button>
+      
+</div>
+<div class="col pm ">
+<div class="row ">
+    <div class="col-md-auto pr-0" >
+        <table class="table spreadsheet-table" id="graphic1">
+            <thead>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+    <div class="col pl-0 slider-container">
+
+        
+            <table class="table spreadsheet-table slider-container" id="graphic2">
+                <thead>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+ 
+    </div>
+</div>
+</div>
+
+<div style="background-color:rgb(197, 197, 197)">
+<div class="row pm"><h2 class="">DELAY TABLE</h2></div>
+<div class="col-1 pm "></div>
+<div class="col-3 pm ">
+<table class="table no-wrap" id="delay">
+    <thead>
+        <tr>
+            <th>Project</th>
+            <th>Delay</th>
+            <th>Penalty</th>
+        </tr>
+    </thead>
+    <tbody >
+
+    </tbody>
+</table>
+</div>
+</div>
+</div>
+ <script>
+
+    populateProjectsTable();
+    updateChart(new GANTT(data).getGantt())
+
+
+ </script>
+
+</body>
