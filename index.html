@@ -7,11 +7,14 @@
 
     <!-- Include Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <script type="text/javascript" src="./EasyGANTT.js"></script>
+   
+    <script type="text/javascript" src="./EasyGANTT.js" ></script>
+    <script type="text/javascript" src="./defaultData.js" ></script>
     <script type="text/javascript" src="./algorithm2.js"></script>
     <style>
-        h2 {
+        h1, h2{
             text-align: center;
+            font-weight: bold;
             margin: 20px;
         }
        
@@ -54,14 +57,46 @@
         }
         .slider-container {
             overflow-x: auto;
+            padding: 0;
+            margin: 0;
   
 
+        }
+        .container-content {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #cookieBanner {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+        }
+        #cookieBanner button {
+            background-color: #007bff;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            margin-left: 10px;
+            cursor: pointer;
         }
 
     </style>
 </head>
 <body >
-    <div style="background-color:rgb(197, 197, 197)" class="container-xxl ">
+    <div id="cookieBanner">
+        <span id="cookieMessage"></span>
+        <button onclick="hideBanner()">OK</button>
+    </div>
+
+    <div style="background-color:rgb(197, 197, 197)" class="container-fluid ">
     <div class="row">    
     <div class="col-1 "></div>
     <div class="col-10 ">
@@ -81,12 +116,15 @@
             </div>
         </div>
         <div class="row">
-            <div class="col  bg-light text-black">
+            <div class="col  bg-light text-black ">
                 <h2>Projects</h2>
                
                     <div class="row">
                         <div class="col">
                             <button class="btn btn-light" onclick="newProject()">New</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-light" onclick="cloneProject()">Duplicate</button>
                         </div>
                         <div class="col">
                             <button class="btn btn-light" onclick="upProject()">Up</button>
@@ -183,69 +221,90 @@
         </div>
 
     </div>
-</div>
-<div class="row p-20">-</div>
-</div>
-<input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
-</div>
-
-<div class="row pm"><h2 class="">GANT CHART</h2></div>
-<div class="row pm" ><button class="btn btn-secondary" onclick="updateChart(new GANTT(data).getGantt())">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
-        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
-      </svg>Redraw graph</button>
-      
-</div>
-<div class="col pm ">
-<div class="row ">
-    <div class="col-md-auto pr-0" >
-        <table class="table spreadsheet-table" id="graphic1">
-            <thead>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
     </div>
-    <div class="col pl-0 slider-container">
 
-        
-            <table class="table spreadsheet-table slider-container" id="graphic2">
+
+
+    <div class="text-center mt-4">
+    <h2 class="">GANT CHART</h2>
+    <button class="btn btn-secondary" onclick="updateChart(new GANTT(data).getGantt())">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+        </svg>
+        Redraw graph
+    </button>  
+    </div>
+
+    <div class="container-content mt-4">
+    <div class="row">
+        <div class="col-md-auto pr-0">
+            <table class="table spreadsheet-table" id="graphic1">
                 <thead>
+                    <!-- Dynamic Content -->
                 </thead>
                 <tbody>
+                    <!-- Dynamic Content -->
                 </tbody>
             </table>
- 
+        </div>
+        <div class="col pl-0 slider-container">
+            <table class="table spreadsheet-table slider-container" id="graphic2">
+                <thead>
+                    <!-- Dynamic Content -->
+                </thead>
+                <tbody>
+                    <!-- Dynamic Content -->
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
-</div>
+    </div>
 
-<div style="background-color:rgb(197, 197, 197)">
-<div class="row pm"><h2 class="">DELAY TABLE</h2></div>
-<div class="col-1 pm "></div>
-<div class="col-3 pm ">
-<table class="table no-wrap" id="delay">
-    <thead>
-        <tr>
-            <th>Project</th>
-            <th>Delay</th>
-            <th>Penalty</th>
-        </tr>
-    </thead>
-    <tbody >
-
-    </tbody>
-</table>
-</div>
-</div>
-</div>
- <script>
-
-    populateProjectsTable();
-    updateChart(new GANTT(data).getGantt())
-
-
- </script>
-
+    <h2 class="">DELAY TABLE</h2>
+    <div class="container-content">
+        <div class="row justify-content-center">
+            <div class="col-3 pm ">
+                <table class="table no-wrap" id="delay">
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Delay</th>
+                            <th>Penalty</th>
+                        </tr>
+                    </thead>
+                    <tbody >
+                        <!-- Dynamic Content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+    <input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
+    <script>
+        populateProjectsTable();
+        updateChart(new GANTT(data).getGantt())
+    </script>
+    <script>
+        function hideBanner() {
+            document.getElementById('cookieBanner').style.display = 'none';
+        }
+    
+        // Determina la lingua dell'utente
+        const userLang = navigator.language || navigator.userLanguage;
+    
+        // Messaggi in diverse lingue
+        const messages = {
+            'it': 'Questo sito non utilizza cookie né raccoglie dati personali per alcun motivo.',
+            'en': 'This site does not use cookies nor collect personal data for any reason.',
+            'fr': 'Ce site n\'utilise pas de cookies et ne collecte aucune donnée personnelle pour quelque raison que ce soit.',
+            'de': 'Diese Website verwendet keine Cookies und sammelt keine persönlichen Daten aus irgendeinem Grund.',
+            'es': 'Este sitio no utiliza cookies ni recopila datos personales por ningún motivo.',
+        };
+    
+        // Imposta il messaggio nella lingua dell'utente, se disponibile
+        const message = messages[userLang.slice(0, 2)] || messages['en']; // Default to English
+        document.getElementById('cookieMessage').textContent = message;
+    </script>
 </body>

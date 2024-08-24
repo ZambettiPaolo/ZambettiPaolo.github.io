@@ -1,58 +1,5 @@
 var projectDelay = []
-var data = [
-    {
-        "name": "pulizia casa",
-        "delivery": "2024-10-25",
-        "penalty": "1",
-        "phases": [
-            {
-                "name": "Lavaggio piatti",
-                "duration": "1",
-                "start": "0",
-                "resources": [
-                    {
-                        "name": "Paolo",
-                        "employed": "100"
-                    },
-                    {
-                        "name": "Carlo",
-                        "employed": "50"
-                    }
-                ]
-            },
-            {
-                "name": "Lavaggio pavimenti",
-                "duration": "1",
-                "start": "1",
-                "resources": [
-                    {
-                        "name": "Giorgio",
-                        "employed": "100"
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        "name": "studio",
-        "delivery": "2024-12-15",
-        "penalty": "10",
-        "phases": [
-            {
-                "name": "matematica",
-                "duration": "1",
-                "start": "1",
-                "resources": [
-                    {
-                        "name": "Carlo",
-                        "employed": "50"
-                    }
-                ]
-            }
-        ]
-    }
-];
-
+//var data =[]
 var selectedProjectIndex = 0;
 var selectedPhaseIndex = 0;
 var selectedResourceIndex = 0;
@@ -94,7 +41,7 @@ function populateProjectsTable() {
     data.forEach((project, index) => {
         var projectRow = document.createElement('tr');
         projectRow.innerHTML = `
-            <td><input type="text" value="${project.name}" name="name" style="width: 18em" maxlength="30" onchange="updateProjectField(${index}, 'name', this.value)"></td>
+            <td><input type="text" value="${project.name}" name="name" style="width: 20em" maxlength="30" onchange="updateProjectField(${index}, 'name', this.value)"></td>
             <td><input type="date" value="${project.delivery}" name="delivery" onchange="updateProjectField(${index}, 'delivery', this.value)"></td>
             <td><input type="number" value="${project.penalty}" name="penalty"  min="0" max="10" step="1" onchange="updateProjectField(${index}, 'penalty', this.value)"></td>
         `;
@@ -118,7 +65,7 @@ function populatePhasesTable() {
     project.phases.forEach((phase, index) => {
         var phaseRow = document.createElement('tr');
         phaseRow.innerHTML = `
-            <td><input type="text" name="description" value="${phase.name}" style="width: 18em" maxlength="30" onchange="updatePhaseField( ${index}, 'name', this.value)"></td>
+            <td><input type="text" name="description" value="${phase.name}" style="width: 20em" maxlength="30" onchange="updatePhaseField( ${index}, 'name', this.value)"></td>
 
             <td><input type="number"  name="start" value="${phase.start}" min="0" max="1" step="1" onchange="updatePhaseField( ${index}, 'start', this.value)"></td>
 
@@ -144,7 +91,7 @@ function populateResourcesTable() {
     phase.resources.forEach((resource, index) => {
         var resourceRow = document.createElement('tr');
         resourceRow.innerHTML = `
-                <td><input type="text" style="width: 10em;" maxlength="15" value="${resource.name}" onchange="updateResourceField( ${index}, 'name', this.value)"></td>
+                <td><input type="text" style="width: 15em;" maxlength="30" value="${resource.name}" onchange="updateResourceField( ${index}, 'name', this.value)"></td>
                 <td><input type="number" value="${resource.employed}" min="1" max="100" step="1" onchange="updateResourceField( ${index}, 'employed', this.value)"></td> 
             `;    
         
@@ -216,17 +163,17 @@ function newProject(){
     selectedPhaseIndex = 0;
     selectedResourceIndex = 0;
     data.splice( selectedProjectIndex,0,{
-        "name": "new",
+        "name": "OVEN",
         "delivery": "2000-1-1",
         "penalty": 0,
         "phases": [
             {
-                "name": "New",
+                "name": "DESIGN",
                 "duration": 1,
                 "start": 0,
                 "resources": [
                     {
-                        "name": "New",
+                        "name": "DESIGNER",
                         "employed": 100
                     }
                 ]
@@ -235,18 +182,28 @@ function newProject(){
     })
     populateProjectsTable();
 }
+
+function cloneProject(){
+    selectedProjectIndex++;
+    selectedPhaseIndex = 0;
+    selectedResourceIndex = 0;
+    const clonedData = structuredClone(data[selectedProjectIndex - 1]);
+    data.splice(selectedProjectIndex, 0, clonedData);
+    populateProjectsTable();
+}
+
 function newPhase(){
     selectedPhaseIndex++;
     selectedResourceIndex = 0;
     data[selectedProjectIndex].phases.splice( selectedPhaseIndex,0, 
          
             {
-                "name": "New",
+                "name": "DESIGN",
                 "duration": 1,
                 "start": 0,
                 "resources": [
                     {
-                        "name": "New",
+                        "name": "DESIGNER",
                         "employed": 100
                     }
                 ]
@@ -259,7 +216,7 @@ function newResorce(){
     selectedResourceIndex++;
     data[selectedProjectIndex].phases[selectedPhaseIndex].resources.splice( selectedResourceIndex,0, 
                     {
-                        "name": "New",
+                        "name": "DESIGNER",
                         "employed": 100
                     }
     
@@ -434,10 +391,10 @@ function updateChart(days){
         if (newDay.getDay()===0){newDay.setDate(newDay.getDate()+1)}
         if (newDay.getDay()===6){newDay.setDate(newDay.getDate()+2)}
 
-        dayString = dayString + "<th width='20px'>"+newDay.getDate()+"</th>";
+        dayString = dayString + "<th>"+newDay.getDate()+"</th>";
         if (newDay.getMonth()===oldMonth){spanMonth++}
         else{ 
-            monthString = monthString + "<th width='20px'class='text-center' colspan="+spanMonth+">"+(oldMonth+1)+"</th>";
+            monthString = monthString + "<th class='text-center' colspan="+spanMonth+">"+(oldMonth+1)+"</th>";
 
             
             spanMonth = 1;
@@ -447,7 +404,7 @@ function updateChart(days){
         
     })
     if(spanMonth!=0){
-        monthString = monthString + "<th width='25px' class='text-center' colspan="+spanMonth+">"+(oldMonth+1)+"</th>";
+        monthString = monthString + "<th class='text-center' colspan="+spanMonth+">"+(oldMonth+1)+"</th>";
 
     }
 
@@ -463,7 +420,10 @@ function updateChart(days){
     for (let i=0; i < days[0].used.length; i++){
         var rowData = document.createElement('tr');
         days.forEach(day => {
-            if (day.used[i]===1){dayString = dayString + "<td bgcolor='blue'></td>"}
+            if (day.used[i]===1){
+                if (i%2===0){dayString = dayString + "<td bgcolor='blue'></td>"}
+                else{dayString = dayString + "<td bgcolor='green'></td>"}
+            }
             else {dayString = dayString + "<td></td>"}
         })
         rowData.innerHTML = dayString
