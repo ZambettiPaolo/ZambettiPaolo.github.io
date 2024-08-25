@@ -6,7 +6,7 @@ var data = [
     "phases": [
       {
         "name": "DESIGN",
-        "duration": 15,
+        "duration": 12,
         "start": 0,
         "resources": [
           {
@@ -17,7 +17,7 @@ var data = [
       },
       {
         "name": "PURCHASE",
-        "duration": 20,
+        "duration": 22,
         "start": 1,
         "resources": [
           {
@@ -28,7 +28,7 @@ var data = [
       },
       {
         "name": "ASSEMBLY",
-        "duration": 20,
+        "duration": 18,
         "start": 1,
         "resources": [
           {
@@ -39,7 +39,7 @@ var data = [
       },
       {
         "name": "CERTIFICATION",
-        "duration": 3,
+        "duration": 4,
         "start": 1,
         "resources": [
           {
