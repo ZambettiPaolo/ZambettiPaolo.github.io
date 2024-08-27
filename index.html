@@ -16,7 +16,12 @@
             font-weight: bold;
             margin: 20px;
         }
-       
+        .fit{
+            width: fit-content;
+        }
+        .auto{
+            margin: 0 auto;
+        }
 
         .selected1 {
             background-color: #007bff;
@@ -86,18 +91,8 @@
             margin-left: 10px;
             cursor: pointer;
         }
-        .material-icons {
-            font-family: 'Material Icons';
-            font-weight: normal;
-            font-style: normal;
-            font-size: 12px;  /* Preferred icon size */
-            display: inline-block;
-            line-height: 1;
-            text-transform: none;
-            letter-spacing: normal;
-            word-wrap: normal;
-            white-space: nowrap;
-            direction: ltr;
+        .margin12{
+            margin-left: 12px;
         }
 
     </style>
@@ -109,11 +104,10 @@
     </div>
 
     <div style="background-color:rgb(197, 197, 197)" class="container-fluid ">
-    <div class="row">    
-    <div class="col-1 "></div>
-    <div class="col-10 ">
+    <div class=" row">    
+    <div class="auto ">
         <div class="row">
-            <div class="col text-center">
+            <div class="col ">
             <h1>EasyGANTT</h1>
             </div>
         </div>
@@ -128,11 +122,11 @@
                 <button class="btn btn-light" onclick="info()">About EasyGANTT</button>
             </div>
         </div>
-        <div class="row">
-            <div class="col  bg-light text-black ">
+        <div class="row fit justify-content-center">
+            <div class="col   bg-light text-black ">
                 <h2>Projects</h2>
                
-                    <div class="row">
+                    <div class="row fit">
                         <div class="col">
                             <button class="btn btn-light" onclick="newProject()">New</button>
                         </div>
@@ -150,7 +144,7 @@
                             <button class="btn btn-light" onclick="deleteProject()">Delete</button>
                         </div>
                     </div>
-                    <div class="row table-container text-star">
+                    <div class="row fit table-container text-star">
                             <table class="table" id="projectsTable">
                                 <thead>
                                     <tr>
@@ -167,10 +161,10 @@
                     </div>
                 
             </div>
-            <div class="col m-0 pl-6 pr-0 bg-primary text-white "  >
+            <div class="col m-0 pl-6 pr-6 bg-primary text-white "  >
                 <h2>Phases</h2>
                
-                    <div class="row">
+                    <div class="row fit">
                         <div class="col">
                             <button class="btn btn-primary" onclick="newPhase()">New</button>
                         </div>
@@ -184,8 +178,8 @@
                             <button class="btn btn-primary" onclick="deletePhase()">Delete</button>
                         </div>
                     </div>
-                    <div class="row-2 table-container">
-                        <table class="table text-star" id="phasesTable">
+                    <div class="row fit table-container">
+                        <table class="table margin12 text-star table-borderless" id="phasesTable">
                             <thead>
                                 <tr>
                                     <th>Description</th>
@@ -200,10 +194,10 @@
                     
                 </div>
             </div>
-              <div class="col-3 bg-warning text-dark">
+              <div class="col bg-warning text-dark">
                 <h2>Resources</h2>
                
-                    <div class="row">
+                    <div class="row  fit">
                         <div class="col">
                             <button class="btn btn-warning" onclick="newResorce()">New</button>
                         </div>
@@ -217,8 +211,8 @@
                             <button class="btn btn-warning" onclick="deleteResource()">Delete</button>
                         </div>
                     </div>
-                    <div class="row table-container text-star">
-                        <table class="table" id="resourcesTable">
+                    <div class="row fit table-container text-star">
+                        <table class="table margin12 " id="resourcesTable">
                             <thead>
                                 <tr>
                                     <th>Resource</th>
@@ -276,8 +270,8 @@
     </div>
 
     <h2 class="">DELAY TABLE</h2>
-    <div class="container-content">
-        <div class="row justify-content-center">
+    <div class="container-content fit auto">
+        <div class="row  ">
             <div class="col-3 pm ">
                 <table class="table no-wrap" id="delay">
                     <thead>
