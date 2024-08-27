@@ -517,7 +517,8 @@ function populateDelayTable(){
     var tableRow = null
     var cost = 0
     var totalCost = 0
-    data.forEach((project, index) => {            
+    data.forEach((project, index) => {   
+        cost = 0         
         tableRow = document.createElement('tr');
         if (projectDelay[index] > 0){ cost = projectDelay[index]* project.penalty }
         tableRow.innerHTML = "<td>"+project.name+"</td><td>"+projectDelay[index]+"</td><td>"+cost+"</td>"

@@ -7,7 +7,6 @@
 
     <!-- Include Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-   
     <script type="text/javascript" src="./EasyGANTT.js" ></script>
     <script type="text/javascript" src="./defaultData.js" ></script>
     <script type="text/javascript" src="./algorithm2.js"></script>
@@ -87,6 +86,19 @@
             margin-left: 10px;
             cursor: pointer;
         }
+        .material-icons {
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 12px;  /* Preferred icon size */
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
 
     </style>
 </head>
@@ -113,7 +125,7 @@
                 <button class="btn btn-light" onclick="downloadJSON()">
                     <img src="./iconDownLoad.png " alt="Upload Icon" width="24" height="24">
                     Download data</button>
-                <button class="btn btn-light" onclick="info()">Abaut EasyGANTT</button>
+                <button class="btn btn-light" onclick="info()">About EasyGANTT</button>
             </div>
         </div>
         <div class="row">
@@ -129,6 +141,7 @@
                         </div>
                         <div class="col">
                             <button class="btn btn-light" onclick="upProject()">Up</button>
+
                         </div>
                         <div class="col">
                             <button class="btn btn-light" onclick="downProject()">Down</button>
