@@ -1,6 +1,6 @@
 var data = [
   {
-    "name": "OVEN",
+    "name": "COFFEE MACHINE",
     "delivery": "2024-11-08",
     "penalty": 2,
     "phases": [
@@ -70,7 +70,7 @@ var data = [
     ]
   },
   {
-    "name": "REFRIGERATOR",
+    "name": "ICE CREAM MACHINE",
     "delivery": "2024-11-21",
     "penalty": 8,
     "phases": [

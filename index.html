@@ -16,6 +16,11 @@
             font-weight: bold;
             margin: 20px;
         }
+        h4{
+            text-align: center;
+            font-weight: normal;
+            margin: 6px;
+        }
         .fit{
             width: fit-content;
         }
@@ -30,7 +35,7 @@
             background-color: #ffc107;
         }
         .selected3 {
-            background-color: #ffffff;
+            background-color: #dee2e6;
             padding:0px;
             margin: 0px;
 
@@ -54,6 +59,8 @@
             overflow: hidden;
             white-space: nowrap;
             text-overflow: ellipsis;
+
+            
         }
         .no-wrap {
             white-space: nowrap;
@@ -94,10 +101,15 @@
         .margin12{
             margin-left: 12px;
         }
+        select{
+            background-color: #ffffff;
+            border-radius: 5px;
+            padding: 4px;
 
+        }
     </style>
 </head>
-<body >
+<body  onload="version()">
     <div id="cookieBanner">
         <span id="cookieMessage"></span>
         <button onclick="hideBanner()">OK</button>
@@ -109,6 +121,7 @@
         <div class="row">
             <div class="col ">
             <h1>EasyGANTT</h1>
+            <h4 id="version">EasyGANTT</h4>
             </div>
         </div>
         <div class="row">
@@ -286,8 +299,9 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div>       
     </div>
+
     </div>
     <input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
     <script>

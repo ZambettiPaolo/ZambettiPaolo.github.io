@@ -16,11 +16,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
 
 
-
+const VERSION = {"major":0, "minor":1, "patch":1}
 var projectDelay = []
 var selectedProjectIndex = 0;
 var selectedPhaseIndex = 0;
 var selectedResourceIndex = 0;
+var meta = {}
+var calendar = []
+var setResources = new Set()
+
+function version() {
+    document.getElementById('version').textContent ="Version: "+VERSION.major+"."+VERSION.minor+"."+VERSION.patch
+}
+
 
   function handleFileUpload(event) {
     const file = event.target.files[0];
@@ -28,7 +36,10 @@ var selectedResourceIndex = 0;
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
-                data = JSON.parse(e.target.result);
+                var res = JSON.parse(e.target.result);
+                data = res.data
+                meta = res.meta
+                calendar = res.calendar
                 populateProjectsTable();
             } catch (err) {
                 alert("Errore nel parsing del file JSON.");
@@ -41,7 +52,10 @@ var selectedResourceIndex = 0;
 }
 
 function downloadJSON() {
-    const json = JSON.stringify(data, null, 2);
+    meta.version = VERSION
+    meta.creationDate = new Date().toJSON().slice(0, 10)
+    var out = {"meta":meta, "data":data, "calendar": calendar }
+    const json = JSON.stringify(out, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -102,26 +116,51 @@ function populatePhasesTable() {
 }
 
 function populateResourcesTable() {
+    
+    setResources = new Set()
+    data.forEach(project => {
+        project.phases.forEach(phase =>{
+            phase.resources.forEach(resource =>{
+                setResources.add(resource.name)
+            })
+        })
+    })
+    
     var resourcesTableBody = document.querySelector('#resourcesTable tbody');
     resourcesTableBody.innerHTML = '';
-    
     var phase = data[selectedProjectIndex].phases[selectedPhaseIndex];
     phase.resources.forEach((resource, index) => {
+        var stringSelect = ""
+        setResources.forEach(resourceOption =>{
+            if (resource.name === resourceOption){
+                stringSelect  = stringSelect + "<option value='"+ resourceOption +"'selected >"+ resourceOption +"</option> \n"    
+            }
+            else{
+                stringSelect  = stringSelect + "<option value='"+ resourceOption +"'>"+ resourceOption+"</option> \n"
+            }
+        })
+           stringSelect = stringSelect + "<option value='add'>Add</option></select>"
         var resourceRow = document.createElement('tr');
         resourceRow.innerHTML = `
-                <td><input type="text" style="width: 15em;" maxlength="30" value="${resource.name}" onchange="updateResourceField( ${index}, 'name', this.value)"></td>
-                <td><input type="number" value="${resource.employed}" min="1" max="100" step="1" onchange="updateResourceField( ${index}, 'employed', this.value)"></td> 
-            `;    
+                <td>
+                    <select class="form-select" onchange="updateResourceField(${index},'name', this.value)">
+                    ${stringSelect} 
+                <td>
+                    <input type="number" value="${resource.employed}" min="1" max="100" step="1" onchange="updateResourceField( ${index}, 'employed', this.value)">
+                </td>`
+                
         
+
         if (selectedResourceIndex === index) {
             resourceRow.classList.add('selected3');
         }   
         resourceRow.classList.add("rowBorder");
         resourceRow.addEventListener('click', function() {toggleResourceSelection(index);});
         resourcesTableBody.appendChild(resourceRow);
-    });
+    })
 
 }
+
 
 // Funzione per selezionare un progetto
 function toggleProjectSelection(index) {
@@ -232,13 +271,18 @@ function newPhase(){
 }
 function newResorce(){
     selectedResourceIndex++;
+    console.log(setResources)
+    data[selectedProjectIndex].phases[selectedPhaseIndex].resources.forEach(res => {
+        setResources.delete(res.name)})
+    console.log(setResources.values().next())
     data[selectedProjectIndex].phases[selectedPhaseIndex].resources.splice( selectedResourceIndex,0, 
                     {
-                        "name": "DESIGNER",
-                        "employed": 100
+                        "name": setResources.values().next().value,
+                        "employed": 0
                     }
     
     )
+
     populateResourcesTable();
 }
 
@@ -361,6 +405,7 @@ function updatePhaseField(index, campo, value){
 }
 
 function updateResourceField(index, campo, value){
+    var res = false
     if (campo === "employed"){
         value = Math.round(value);
         if (value >100){
@@ -370,7 +415,17 @@ function updateResourceField(index, campo, value){
             value = 1;
         }
     }
+    if (value === "add"){ value = prompt("Insert new resource name")
+        if (setResources.has(value)){res=true}   
+    }
+
+    if (campo==="name"){
+        data[selectedProjectIndex].phases[selectedPhaseIndex].resources.forEach(resource => {if(resource.name===value){res=true}})}
+    if(!res){
+    
     data[selectedProjectIndex].phases[selectedPhaseIndex].resources[index][campo] = value;
+    }
+    else{ alert("Invald value!")}
     populateResourcesTable();
 }
 
