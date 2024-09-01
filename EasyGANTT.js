@@ -117,14 +117,7 @@ function populatePhasesTable() {
 
 function populateResourcesTable() {
     
-    setResources = new Set()
-    data.forEach(project => {
-        project.phases.forEach(phase =>{
-            phase.resources.forEach(resource =>{
-                setResources.add(resource.name)
-            })
-        })
-    })
+    rigenSetResource();
     
     var resourcesTableBody = document.querySelector('#resourcesTable tbody');
     resourcesTableBody.innerHTML = '';
@@ -161,6 +154,17 @@ function populateResourcesTable() {
 
 }
 
+
+function rigenSetResource() {
+    setResources = new Set();
+    data.forEach(project => {
+        project.phases.forEach(phase => {
+            phase.resources.forEach(resource => {
+                setResources.add(resource.name);
+            });
+        });
+    });
+}
 
 // Funzione per selezionare un progetto
 function toggleProjectSelection(index) {
@@ -270,19 +274,36 @@ function newPhase(){
     populatePhasesTable();
 }
 function newResorce(){
+    rigenSetResource()
     selectedResourceIndex++;
-    console.log(setResources)
     data[selectedProjectIndex].phases[selectedPhaseIndex].resources.forEach(res => {
         setResources.delete(res.name)})
-    console.log(setResources.values().next())
-    data[selectedProjectIndex].phases[selectedPhaseIndex].resources.splice( selectedResourceIndex,0, 
-                    {
-                        "name": setResources.values().next().value,
-                        "employed": 0
-                    }
-    
-    )
-
+    var firstFreeResource = setResources.values().next().value
+    console.log(firstFreeResource)
+    if (firstFreeResource===undefined){ 
+        var name = prompt("Insert new resource name")
+        rigenSetResource()
+        if (!setResources.has(name)){   
+            data[selectedProjectIndex].phases[selectedPhaseIndex].resources.splice( selectedResourceIndex,0, 
+                {
+                "name": name,
+                "employed": 0
+                }
+            )
+        }
+        else{
+            alert("Invald value!")
+            selectedResourceIndex = 0
+        }    
+    }
+    else{
+        data[selectedProjectIndex].phases[selectedPhaseIndex].resources.splice( selectedResourceIndex,0, 
+                {
+                "name": firstFreeResource,
+                "employed": 0
+                }
+            )
+    }
     populateResourcesTable();
 }
 
@@ -427,6 +448,7 @@ function updateResourceField(index, campo, value){
     }
     else{ alert("Invald value!")}
     populateResourcesTable();
+    return value
 }
 
 var resourcesList = [];

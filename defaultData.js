@@ -1,7 +1,7 @@
 var data = [
   {
     "name": "COFFEE MACHINE",
-    "delivery": "2024-11-08",
+    "delivery": "2024-11-15",
     "penalty": 2,
     "phases": [
       {
@@ -71,7 +71,7 @@ var data = [
   },
   {
     "name": "ICE CREAM MACHINE",
-    "delivery": "2024-11-21",
+    "delivery": "2024-11-28",
     "penalty": 8,
     "phases": [
       {
