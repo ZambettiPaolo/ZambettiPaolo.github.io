@@ -26,15 +26,12 @@ class GANTT{
         this.phaseIndex = 0
         this.numberOfPhases = 0
         this.setNumberOfPhases()
-
         this.solution = []//array di giorni
         this.resources = new Set()
         this.setResources()
-        
-        this.data.forEach(project => 
-            this.insertProject(project)
-        )
+        this.data.forEach(project => this.insertProject(project))
     }
+
     setNumberOfPhases(){
         data.forEach(project =>{
             this.numberOfPhases = this.numberOfPhases + project.phases.length
@@ -42,11 +39,13 @@ class GANTT{
     }
 
     setResources(){
-
-        this.data.forEach(project => project.phases.forEach(phase => phase.resources.forEach(resource => 
-            this.resources.add(resource.name)
+        this.data.forEach(project => 
+            project.phases.forEach(phase => 
+                phase.resources.forEach(resource => 
+                    this.resources.add(resource.name)
         )))
     }
+
     getNewDay(){
         const map = new Map()
         this.resources.forEach(res => map.set(res, 0))
@@ -57,26 +56,22 @@ class GANTT{
         }
         return day
     }
+
     getGantt(){
         console.log(this.solution)
         return this.solution
     }
 
-
     insertProject(project){
         var currentDay = 0
         project.phases.forEach((phase, index) => {
-            
-            
             if (index!=0){ //cerca il giorno in cui cominciare a inserire la fase se PARALLEL
                 if (phase.start===PARALLEL){
                     currentDay = 0
-
                     while (this.solution[currentDay].used[this.phaseIndex-1]===0){currentDay++}
                 }
             }
             for(let i = 0; i < phase.duration; i++){0
-                
                 do{
                 var isFree = true
                 var emp = 0
@@ -86,7 +81,6 @@ class GANTT{
                     newDay.used[this.phaseIndex] = 1
                     phase.resources.forEach(res => {
                         newDay.resource.set(res.name, res.employed)
-
                     })
                     newDay.used[this.phaseIndex] = 1
                     this.solution[currentDay] = newDay
@@ -108,20 +102,11 @@ class GANTT{
                         this.solution[currentDay].used[this.phaseIndex]=1
                     }   
                     } 
-
-                
-                    
-                  
-
                 }
                 while (!isFree)    
                 currentDay++
             }
-
             this.phaseIndex++
-            
-
-                
         })    
    } 
 }

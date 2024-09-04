@@ -1,0 +1,96 @@
+h1, h2{
+    text-align: center;
+    font-weight: bold;
+    margin: 20px;
+}
+h4{
+    text-align: center;
+    font-weight: normal;
+    margin: 6px;
+}
+.fit{
+    width: fit-content;
+}
+.auto{
+    margin: 0 auto;
+}
+.selected1 {
+    background-color: #007bff;
+}
+.selected2 {
+    background-color: #007bff;
+}
+.selected3 {
+    border-radius:6px;
+    background-color: #ffa007;
+    padding:0px;
+    margin: 0px;
+
+}
+
+.rowBorder {
+    border: 0px;
+    padding:15px;
+    margin: 15px;
+}
+.noMargin{
+    margin: 0px;
+}
+.spreadsheet-table th,
+.spreadsheet-table td {
+    text-align: left;
+    min-width: 10px;
+    height: 30px;
+    border: 1px solid #dee2e6;
+    padding: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+
+    
+}
+.no-wrap {
+    white-space: nowrap;
+
+}
+.slider-container {
+    overflow-x: auto;
+    padding: 0;
+    margin: 0;
+
+
+}
+.container-content {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+#cookieBanner {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+}
+#cookieBanner button {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+.margin12{
+    margin-left: 12px;
+}
+select{
+    background-color: #ffffff;
+    border-radius: 5px;
+    padding: 4px;
+
+}
