@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
 
 
-const VERSION = {"major":0, "minor":2, "patch":0}
+const VERSION = {"major":0, "minor":2, "patch":1}
 var projectDelay = []
 var selectedProjectIndex = 0
 var selectedPhaseIndex = 0
