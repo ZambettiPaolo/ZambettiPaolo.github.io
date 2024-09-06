@@ -1,4 +1,28 @@
-h1, h2{
+
+body{
+    background-color:rgb(255, 255, 255);
+
+}
+
+.svg-justify{
+    justify-content: center;  
+    height: 60vh;
+
+}
+
+.svg-justify > img{
+    height: 100%;
+}
+
+h1{
+    font-weight: bold;
+    color:rgb(213, 213, 213);
+    text-align: center;
+    height: 25vh;
+    
+}
+
+h2{
     text-align: center;
     font-weight: bold;
     margin: 20px;
@@ -18,7 +42,7 @@ h4{
     background-color: #007bff;
 }
 .selected2 {
-    background-color: #007bff;
+    background-color: #ffc007;
 }
 .selected3 {
     border-radius:6px;
@@ -65,6 +89,8 @@ h4{
     padding: 20px;
     border-radius: 5px;
     margin-bottom: 20px;
+    box-shadow: 10px 10px 20px 5px rgba(0, 0, 0, 0.3);
+
 }
 #cookieBanner {
     position: fixed;

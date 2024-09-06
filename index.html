@@ -12,22 +12,19 @@
     <script type="text/javascript" src="./EasyGANTT.js" ></script>
     <script type="text/javascript" src="./defaultData.js" ></script>
     <script type="text/javascript" src="./algorithm2.js"></script>
+    <link rel="icon" href="./ICON_EASYGANTT.png " type="image/png">
 </head>
 <body  onload="version()">
-    <div id="cookieBanner">
-        <span id="cookieMessage"></span>
-        <button onclick="hideBanner()">OK</button>
+    <div class="row svg-justify">
+        <img src="./ICONA.svg">
+    </div>
+    <div class="row"></div>
+        <h1 id="version">EasyGANTT</h1>
     </div>
 
-    <div style="background-color:rgb(197, 197, 197)" class="container-fluid ">
-    <div class=" row">    
-    <div class="auto ">
-        <div class="row">
-            <div class="col ">
-            <h1>EasyGANTT</h1>
-            <h4 id="version">EasyGANTT</h4>
-            </div>
-        </div>
+
+    <div class="container-fluid">
+        <div class="container-content fit auto">
         <div class="row">
             <div >
                 <label src="./iconUpLoad.png "class="btn btn-light" for="uploadFile" style="margin-bottom: 0;">
@@ -39,17 +36,17 @@
                 <button class="btn btn-light" onclick="info()">About EasyGANTT</button>
             </div>
         </div>
-        <div class="row fit justify-content-center">
-            <div class="col   bg-light text-black ">
+        <div class="row  justify-content-center  ">
+            <div class="col bg-light text-black">
                 <h2>Projects</h2>
-                    <div class="row fit">
+                    <div class="row">
                             <button class="btn btn-light " onclick="newProject()"><i class="bi bi-plus-square"></i> New</button>
                             <button class="btn btn-light " onclick="cloneProject()"><i class="bi bi-files"></i> Duplicate</button>
                             <button class="btn btn-light " onclick="upProject()"><i class="bi bi-arrow-up-square"></i> Up</button>
                             <button class="btn btn-light " onclick="downProject()"><i class="bi bi-arrow-down-square"></i> Down</button>
-                            <button class="btn btn-light" onclick="deleteProject()"><i class="bi bi-trash3"></i> Delete</button>
+                            <button class="btn btn-light " onclick="deleteProject()"><i class="bi bi-trash3"></i> Delete</button>
                     </div>
-                    <div class="row fit table-container text-star">
+                    <div class="row table-container text-star">
                             <table class="table" id="projectsTable">
                                 <thead>
                                     <tr>
@@ -69,13 +66,13 @@
             <div class="col m-0 pl-6 pr-6 bg-primary text-white "  >
                 <h2>Phases</h2>
                
-                    <div class="row fit">
+                    <div class="row ">
                             <button class="btn btn-primary" onclick="newPhase()"><i class="bi bi-plus-square"></i> New</button>
                             <button class="btn btn-primary" onclick="upPhase()"><i class="bi bi-arrow-up-square"></i> Up</button>
                             <button class="btn btn-primary" onclick="downPhase()"><i class="bi bi-arrow-down-square"></i> Down</button>
                             <button class="btn btn-primary" onclick="deletePhase()"><i class="bi bi-trash3"></i> Delete</button>
                     </div>
-                    <div class="row fit table-container">
+                    <div class="row table-container">
                         <table class="table margin12 text-star table-borderless" id="phasesTable">
                             <thead>
                                 <tr>
@@ -93,11 +90,11 @@
             </div>
               <div class="col bg-warning text-dark">
                 <h2>Resources</h2>
-                    <div class="row  fit">
+                    <div class="row ">
                             <button class="btn btn-warning" onclick="newResorce()"><i class="bi bi-plus-square"></i> New</button>
                             <button class="btn btn-warning" onclick="deleteResource()"><i class="bi bi-trash3"></i> Delete</button>
                     </div>
-                    <div class="row fit table-container text-star">
+                    <div class="row  table-container text-star">
                         <table class="table margin12 " id="resourcesTable">
                             <thead>
                                 <tr>
@@ -114,8 +111,8 @@
             </div>
         </div>
 
-    </div>
-    </div>
+ 
+</div>
 
 
 
@@ -129,8 +126,9 @@
         Redraw
     </button>  
     </div>
-
-    <div class="container-content mt-4">
+</div>
+<div class="col m-12">
+    <div class="container-content">
     <div class="row">
         <div class="col-md-auto pr-0">
             <table class="table spreadsheet-table" id="graphic1">
@@ -154,6 +152,7 @@
         </div>
     </div>
     </div>
+</div>
 
     <h2 class="">DELAY TABLE</h2>
     <div class="container-content fit auto">
@@ -175,6 +174,10 @@
         </div>       
     </div>
 
+    </div>
+    <div id="cookieBanner">
+        <span id="cookieMessage"></span>
+        <button onclick="hideBanner()">OK</button>
     </div>
     <input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
     <script>
