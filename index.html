@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Progetti e Fasi</title>
+    <title>EasyGANTT</title>
 
     <!-- Include Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
@@ -27,13 +27,14 @@
         <div class="container-content fit auto">
         <div class="row">
             <div >
-                <label src="./iconUpLoad.png "class="btn btn-light" for="uploadFile" style="margin-bottom: 0;">
-                    <img src="./iconUpLoad.png " alt="Upload Icon" width="24" height="24">
+                <label class="btn btn-light" for="uploadFile" style="margin-bottom: 0;">
+                    <i class="bi bi-upload"></i>
                     Upload data</label>
                 <button class="btn btn-light" onclick="downloadJSON()">
-                    <img src="./iconDownLoad.png " alt="Upload Icon" width="24" height="24">
+                    <i class="bi bi-download"></i>
                     Download data</button>
-                <button class="btn btn-light" onclick="info()">About EasyGANTT</button>
+                <button class="btn btn-light" onclick="info()">
+                    <i class="bi bi-info-square fa-sm " ></i> About EasyGANTT</button>
             </div>
         </div>
         <div class="row  justify-content-center  ">
@@ -116,19 +117,32 @@
 
 
 
-    <div class="text-center mt-4">
-    <h2 class="">GANTT CHART</h2>
-    <button class="btn btn-secondary" onclick="updateChart(new GANTT(data).getGantt())">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
-            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
-        </svg>
-        Redraw
-    </button>  
+    <div class="text-center">
+        <h3>GANTT CHART</h3>
     </div>
 </div>
-<div class="col m-12">
+<div class="col ">
     <div class="container-content">
+        <div class="row fit mb-6"> 
+            <div class="col ">     
+        <button class="btn btn-info " onclick="updateChart(new GANTT(data).getGantt())">
+        <i class="bi bi-brush"></i>
+        Redraw
+        </button>
+        </div>
+        <div class="col "> 
+        <button class="btn btn-warning no-wrap" onclick="recalculateStartingToday()">
+            <i class="bi bi-calculator"></i>
+            recalculate starting today
+            </button>
+        </div>
+        <div class="col "> 
+            <button class="btn btn-danger no-wrap" onclick="cutProjectsToday()">
+                <i class="bi bi-scissors"></i>
+                cut projects today
+                </button>
+            </div>
+        </div>
     <div class="row">
         <div class="col-md-auto pr-0">
             <table class="table spreadsheet-table" id="graphic1">
@@ -153,8 +167,9 @@
     </div>
     </div>
 </div>
-
-    <h2 class="">DELAY TABLE</h2>
+<div class="text-center">
+    <h3>DELAY TABLE</h3>
+</div>
     <div class="container-content fit auto">
         <div class="row  ">
             <div class="col-3 pm ">

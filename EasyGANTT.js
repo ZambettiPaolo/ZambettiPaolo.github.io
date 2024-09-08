@@ -16,13 +16,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
 
 
-const VERSION = {"major":0, "minor":2, "patch":1}
+const VERSION = {"major":0, "minor":3, "patch":0}
 var projectDelay = []
 var selectedProjectIndex = 0
 var selectedPhaseIndex = 0
 var selectedResourceIndex = 0
-var meta = {}
-var calendar = []
 var setResources = new Set()
 
 
@@ -42,6 +40,7 @@ function handleFileUpload(event) {
                 meta = res.meta
                 calendar = res.calendar
                 populateProjectsTable()
+                updateChart(new GANTT(data).getGantt())
             } catch (err) {
                 alert("Errore nel parsing del file JSON.")
             }
@@ -55,7 +54,7 @@ function handleFileUpload(event) {
 
 function downloadJSON() {
     meta.version = VERSION
-    meta.creationDate = new Date().toJSON().slice(0, 10)
+    
     var out = {"meta":meta, "data":data, "calendar": calendar }
     const json = JSON.stringify(out, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
@@ -445,9 +444,12 @@ function updateChart(days){
     var dayHead = document.createElement('tr')
     var monthString = ""
     var dayString = ""
-    var newDay = new Date();
-    var oldMonth = newDay.getMonth();
-    var spanMonth =  0;
+    var startDay = new Date(meta.creationDate)
+    var newDay = new Date()
+
+    if (startDay < newDay){newDay=startDay}
+    var oldMonth = newDay.getMonth()
+    var spanMonth =  0
     days.forEach((day, i) => { 
         if (newDay.getDay()===0){newDay.setDate(newDay.getDate()+1)}
         if (newDay.getDay()===6){newDay.setDate(newDay.getDate()+2)}
@@ -476,20 +478,31 @@ function updateChart(days){
     tableBody.innerHTML = ""
     var dayString=""
     var listPhases = []
+    var deltaDay = calcDayDate(new Date())
+    var color = "#2855c8"
+    console.log(deltaDay)
     data.forEach(project => project.phases.forEach(phase => listPhases.push(phase)))
     for (let i=0; i < days[0].used.length; i++){
         var rowData = document.createElement('tr')
-        days.forEach(day => {
+        days.forEach((day, index) => {
             if (day.used[i]===1){
-                if (i%2===0){dayString = dayString + "<td bgcolor='blue'></td>"}
-                else{dayString = dayString + "<td bgcolor='green'></td>"}
+                if((deltaDay-index) > 0){ 
+                    if (i%2===0){color="#468ac9"}else{color="#61bb34"}
+                }
+                else{
+                    if (i%2===0){color="#2855c8"}else{color="#00ca26"}
+                }
+            dayString = `${dayString} <td bgcolor=${color}></td>` 
             }
-            else {dayString = dayString + "<td></td>"}
+            else {
+                if((deltaDay-index) > 0){dayString = dayString + "<td bgcolor='#fff281'></td>"}else{dayString = dayString + "<td></td>"}
+                
+            }
         })
         rowData.innerHTML = dayString
         var stringResorces = ""
         listPhases[i].resources.forEach(res => {
-            stringResorces = stringResorces + res.name + "\n"
+            stringResorces = `${stringResorces} ${res.name}: ${res.employed}\n`
         })
         rowData.setAttribute('title', stringResorces);
         tableBody.appendChild(rowData)
@@ -503,7 +516,7 @@ function updateChart(days){
     rowHead.innerHTML="<th></th><th>Month</th>"
     tableHead.appendChild (rowHead) 
     rowHead = document.createElement('tr')
-    rowHead.innerHTML="<th>Projects</th><th>Phases/Day</th>"
+    rowHead.innerHTML="<th>Projects</th><th>Phases \\ Day</th>"
     tableHead.appendChild (rowHead)
     
 
@@ -517,7 +530,6 @@ function updateChart(days){
         project.phases.forEach((phase, y) => {
             if (y!=0){
                 tableRow = document.createElement('tr')
-                //bodyString = `<td>${phase.name}</td>`
                 tableRow.innerHTML = `<td>${phase.name}</td>`
                 tableBody.appendChild(tableRow)
             }
@@ -545,13 +557,15 @@ function calcProjecDelay(days){
 }
 
 function calcDayDate(data){
-    var newDay = new Date()
+    var newDay = new Date(meta.creationDate)
+    console.log(meta.creationDate)
     var numDay = 0
     while (newDay <= data){
+        
+        if (newDay.getDay()!=0 && newDay.getDay()!= 6) numDay++
+    
         newDay.setDate(newDay.getDate()+1)
-        if (!(newDay.getDay()===0 || newDay.getDay()===6)){
-            numDay++
-        }
+        
     }
     return numDay
 }
@@ -574,6 +588,51 @@ function populateDelayTable(){
     tableRow.innerHTML = `<td>Total cost</td><td></td><td>${totalCost}</td>`
     tableBody.appendChild(tableRow)
 }
+
+function recalculateStartingToday(){
+    if (confirm(`Warning! Irreversible action \n 
+                The start date will be set to today\n
+                The old date will be deleted`)){ 
+        meta.creationDate = new Date().toJSON().slice(0, 10)
+        updateChart(new GANTT(data).getGantt())
+    }
+}
+
+function cutProjectsToday(){
+    if (confirm(`Warning! Irreversible action\n
+        All phases in the past will be deleted\n
+        The start date will be set to today`)){    
+        days = new GANTT(data).getGantt()
+    var deltaDay = calcDayDate(new Date())
+    var listPhases = []
+    var nDay = 0
+    data.forEach(project => project.phases.forEach(phase => listPhases.push(phase)))
+    while (((deltaDay-nDay) > 0) && (nDay < days.length)){
+        days.forEach((day, index) => {
+            if (day.used[index]===1){
+                if(listPhases[index].duration > 0){
+                    listPhases[index].duration--
+                }
+            }
+        })
+        nDay++
+    }
+    data.forEach((project, pIndex) => project.phases.forEach((phase, index)=>{
+        if (phase.duration===0){
+            data[pIndex].phases.splice(index, 1)
+        }
+    }))
+    populateProjectsTable()
+    var today= new Date()
+    console.log(meta.creationDate)
+    if(today.getDay()===0 ) today.setDate(today.getDate()+1)
+    if(today.getDay()===6 ) today.setDate(today.getDate()+2)
+    meta.creationDate = today.toJSON().slice(0, 10)
+    updateChart(new GANTT(data).getGantt())
+    populateDelayTable()
+}
+}
+
 function info(){ 
     window.alert(
     'EasyGANTT is a program for managing projects \n'+ 

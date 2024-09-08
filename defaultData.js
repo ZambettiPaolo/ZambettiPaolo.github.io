@@ -1,3 +1,7 @@
+var calendar = []
+var meta = {
+  "creationDate": "2024-8-26"
+}
 var data = [
   {
     "name": "COFFEE MACHINE",
