@@ -1,6 +1,42 @@
-var calendar = []
+var setResources = [
+  {
+    "name":"ALL",
+    "holidays":[
+      {
+        "startDate":"2024-12-18",
+        "duration": 11,
+        "employed": 100
+      }
+    ]
+  },
+  {
+    "name":"DESIGNER",
+    "holidays":[
+      {
+        "startDate":"2025-01-02",
+        "duration": 5,
+        "employed": 100
+      },
+      {
+        "startDate":"2025-03-15",
+        "duration": 10,
+        "employed": 100
+      }
+    ]
+  },
+  {
+    "name":"PURCHASING OFFI",
+    "holidays":[
+      {
+      "startDate":"2025-04-15",
+      "duration": 10,
+      "employed": 100
+      }
+    ]
+  }
+]
 var meta = {
-  "creationDate": "2024-8-26"
+  "creationDate": "2024-12-01"
 }
 var data = [
   {

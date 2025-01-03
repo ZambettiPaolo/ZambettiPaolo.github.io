@@ -42,10 +42,10 @@ class GANTT{
         for(let i = 1; i < project.phases.length; i++){
             if(project.phases[i].start === SEQUENCE){
                 start = end+1
-                console.log("SEQUENCE!", end)
+          
             }
                
-            console.log("Start ", project.phases[i], start)
+ 
             end = this.insertPhase(project.phases[i], start)
         }
     

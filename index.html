@@ -9,8 +9,8 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css">
     <link href="./defaultStyle.css" rel="stylesheet" type="text/css">
-    <script type="text/javascript" src="./EasyGANTT.js" ></script>
     <script type="text/javascript" src="./defaultData.js" ></script>
+    <script type="text/javascript" src="./EasyGANTT.js" ></script>
     <script type="text/javascript" src="./algorithm2.js"></script>
     <link rel="icon" href="./ICON_EASYGANTT.png " type="image/png">
 </head>
@@ -92,8 +92,8 @@
               <div class="col bg-warning text-dark">
                 <h2>Resources</h2>
                     <div class="row ">
-                            <button class="btn btn-warning" onclick="newResorce()"><i class="bi bi-plus-square"></i> New</button>
-                            <button class="btn btn-warning" onclick="deleteResource()"><i class="bi bi-trash3"></i> Delete</button>
+                            <button class="btn btn-warning" onclick="addResorce()"><i class="bi bi-plus-square"></i> New</button>
+                            <button class="btn btn-warning" onclick="removeResource()"><i class="bi bi-trash3"></i> Delete</button>
                     </div>
                     <div class="row  table-container text-star">
                         <table class="table margin12 " id="resourcesTable">
@@ -117,6 +117,67 @@
 
 
 
+<div class="text-center">
+    <h3>RESOURCES MANAGER</h3>
+</div>  
+<div class="container-content fit auto"> 
+        <div class="row  justify-content-center  "> 
+            <div class="col bg-light text-black">
+                <h2>Resources</h2>
+                    <div class="row">
+                            <button class="btn btn-light " onclick="newResource()"><i class="bi bi-plus-square"></i> New</button>
+                            <button class="btn btn-light " onclick="deleteResource()"><i class="bi bi-trash3"></i> Delete</button>
+                            <button class="btn btn-light" onclick="sortSetResource()"><i class="bi bi-sort-alpha-down"></i> Sort</button>
+                    </div>
+                    <div class="row table-container text-star">
+                            <table class="table" id="resourcemanager">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody onload="populateReourceManagerTable()">
+
+                                </tbody>
+                            </table>
+                        
+                    </div>
+                
+            </div>
+            <div class="col m-0 pl-6 pr-6 bg-primary text-white "  >
+                <h2>Holiday</h2>
+               
+                    <div class="row ">
+                            <button class="btn btn-primary" onclick="newHoliday()"><i class="bi bi-plus-square"></i> New</button>
+                            <button class="btn btn-primary" onclick="deleteHoliday()"><i class="bi bi-trash3"></i> Delete</button>
+                            <button class="btn btn-primary" onclick="sortHoliday()"><i class="bi bi-sort-numeric-down"></i> Sort</button>
+                    </div>
+                    <div class="row table-container">
+                        <table class="table margin12 text-star table-borderless" id="holidaytable">
+                            <thead>
+                                <tr>
+                                    <th>Start</th>
+                                    <th>Duration</th>
+                                    <th>Employed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                            </tbody>
+                        </table>
+                    
+                </div>
+            </div>
+        </div>
+
+ 
+</div>
+</div>
+</div>
+
+
+
+
     <div class="text-center">
         <h3>GANTT CHART</h3>
     </div>
@@ -125,7 +186,7 @@
     <div class="container-content">
         <div class="row fit mb-6"> 
             <div class="col ">     
-        <button class="btn btn-info " onclick="updateChart(new GANTT(data).getGantt())">
+        <button class="btn btn-info " onclick="updateChart(new GANTT(data,setResources,meta).getGantt())">
         <i class="bi bi-brush"></i>
         Redraw
         </button>
@@ -196,8 +257,9 @@
     </div>
     <input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
     <script>
-        populateProjectsTable();
-        updateChart(new GANTT(data).getGantt())
+        rigenSetResource()
+        populateProjectsTable()
+        updateChart(new GANTT(data, setResources, meta).getGantt())
     </script>
     <script>
         function hideBanner() {

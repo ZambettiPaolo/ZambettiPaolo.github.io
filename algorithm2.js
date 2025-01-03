@@ -21,46 +21,126 @@ const SEQUENCE = 1
 
 class GANTT{
 
-    constructor(data){
+    constructor(data, setResources,meta){
         this.data = data
-        this.phaseIndex = 0
+        this.setResources = setResources
+        this.meta = meta
+        this.startGantt= new Date(meta.creationDate)
+        this.phaseIndex = 1
         this.numberOfPhases = 0
         this.setNumberOfPhases()
         this.solution = []//array di giorni
-        this.resources = new Set()
-        this.setResources()
+        this.resourcesEmployed = new Set()
+        this.setResourcesEmployed()
+        this.setResources.forEach(resource => this.insertHoliday(resource))
         this.data.forEach(project => this.insertProject(project))
     }
 
     setNumberOfPhases(){
+        this.numberOfPhases = 1
         data.forEach(project =>{
             this.numberOfPhases = this.numberOfPhases + project.phases.length
         })
+
     }
 
-    setResources(){
-        this.data.forEach(project => 
-            project.phases.forEach(phase => 
-                phase.resources.forEach(resource => 
-                    this.resources.add(resource.name)
-        )))
+    setResourcesEmployed(){
+        this.setResources.forEach(resource => 
+                    this.resourcesEmployed.add(resource.name)
+        )
+        //console.log(this.setResources)
     }
 
     getNewDay(){
         const map = new Map()
-        this.resources.forEach(res => map.set(res, 0))
+        this.resourcesEmployed.forEach(res => map.set(res, 0))
         var day = {used: [], resource: map}
-        console.log(this.numberOfPhases)
+        //console.log(this.numberOfPhases)
         for (let i=0; i<this.numberOfPhases; i++){
             day.used.push(0);   
         }
         return day
     }
 
+    dateToDayNumber(date){
+        var dayN= 0
+        var day = new Date(date)
+        var delta = Math.floor((day-this.startGantt)/ (1000 * 60 * 60 * 24))
+        var newDay = new Date(meta.creationDate)
+        if (delta > 0){
+            for (let i=0; i<delta; i++){
+                newDay.setDate(newDay.getDate()+1)
+                if (!(newDay.getDay()==0 || newDay.getDay()==6)){dayN++}
+            }
+            
+        }
+        else{
+            for (let i=0; i>delta; i--){
+                newDay.setDate(newDay.getDate()-1)
+                if (!(newDay.getDay()==0 || newDay.getDay()==6)){dayN--}
+            }
+
+        }
+        return dayN
+    }
+
     getGantt(){
         console.log(this.solution)
         return this.solution
     }
+
+    insertHoliday(resource){
+        var emp = 0
+        var day = {}
+        resource.holidays.forEach((holiday, index) => {
+            var dayNumberStart = this.dateToDayNumber(holiday.startDate)
+            var duration = holiday.duration
+            if(dayNumberStart < 0 && dayNumberStart + holiday.duration >=0){
+                duration = dayNumberStart + holiday.duration
+                dayNumberStart = 0
+            }
+            var dayNumberFinish = dayNumberStart + duration
+            if(dayNumberStart>=0){
+                for (let currentDay = 0; currentDay < dayNumberFinish;currentDay++){
+                    if (this.solution.length <= currentDay){
+                        var newDay = this.getNewDay()
+                        this.solution[currentDay] = newDay
+                    }
+                    day = this.solution[currentDay]
+                    if (currentDay >= dayNumberStart){
+                        day.used[0] = 1
+                        if (day.resource.has(resource.name)) {
+                            emp = day.resource.get(resource.name)
+                            emp = emp + holiday.employed
+                            if (emp + holiday.employed>100) emp = 100
+                            if (resource.name == "ALL"){
+                                
+                                this.resourcesEmployed.forEach((value,key) =>{
+                                    emp = day.resource.get(value)
+                                    emp = emp + holiday.employed
+                                    if (emp + holiday.employed>100) emp = 100
+                                    newDay.resource.set(key, emp)
+                                }) 
+                            }
+                            else day.resource.set(resource.name, emp ) 
+                            
+
+                        }
+                        else{
+                            if (res.name=="ALL"){
+                                this.resourcesEmployed.forEach((value,key) =>{
+                                    newDay.resource.set(value, holiday.employed)
+                                }) 
+                            }
+                            else newDay.resource.set(resource.name, holiday.employed)
+                             
+                        }   
+                    }
+                }
+            }
+        })
+    }
+
 
     insertProject(project){
         var currentDay = 0
@@ -79,8 +159,7 @@ class GANTT{
                     isFree = true
                     var newDay = this.getNewDay()
                     newDay.used[this.phaseIndex] = 1
-                    phase.resources.forEach(res => {
-                        newDay.resource.set(res.name, res.employed)
+                    phase.resources.forEach(res => {                        
                     })
                     newDay.used[this.phaseIndex] = 1
                     this.solution[currentDay] = newDay
@@ -95,9 +174,10 @@ class GANTT{
                     })
                     if  (isFree){
                         phase.resources.forEach(res => {
+   
                             emp =this.solution[currentDay].resource.get(res.name)
-
                             this.solution[currentDay].resource.set(res.name, (res.employed + emp))
+                            
                         })
                         this.solution[currentDay].used[this.phaseIndex]=1
                     }   

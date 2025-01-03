@@ -66,6 +66,13 @@ h4{
     margin: 0px;
 
 }
+.holidayTitle {
+    border-radius:6px;
+    background-color: #ffa007;
+    padding:6px;
+    margin: 0px;
+
+}
 
 .rowBorder {
     border: 0px;
