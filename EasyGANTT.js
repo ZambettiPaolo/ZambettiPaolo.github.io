@@ -23,10 +23,20 @@ var selectedPhaseIndex = 0
 var selectedResourceIndex = 0
 var selectedHolidayIndex = 0
 var currentResourceIndex = 0
-var selectedIndex = 0
 var dataLimiteMax ="2025-01-01"
 var dataLimiteMin ="2025-01-01"
 var selectorSetResources = new Set()
+rigenSetResource()
+var undoRedoManager = new UndoRedoManager({
+    "data":data, 
+    "meta":meta, 
+    "setResources":setResources,
+    "selectedProjectIndex":selectedProjectIndex,
+    "selectedPhaseIndex":selectedPhaseIndex,
+    "selectedResourceIndex":selectedResourceIndex,
+    "selectedHolidayIndex":selectedHolidayIndex,
+    "currentResourceIndex":currentResourceIndex
+})
 limitDate()
 
 
@@ -47,6 +57,16 @@ function handleFileUpload(event) {
                 meta = res.meta
                 setResources = res.setResources
                 rigenSetResource()
+                undoRedoManager = new UndoRedoManager({
+                    "data":data, 
+                    "meta":meta, 
+                    "setResources":setResources,
+                    "selectedProjectIndex":selectedProjectIndex,
+                    "selectedPhaseIndex":selectedPhaseIndex,
+                    "selectedResourceIndex":selectedResourceIndex,
+                    "selectedHolidayIndex":selectedHolidayIndex,
+                    "currentResourceIndex":currentResourceIndex
+                })
                 populateProjectsTable()
                 setHolidayTitle()
                 updateChart(new GANTT(data,setResources,meta).getGantt())
@@ -59,6 +79,34 @@ function handleFileUpload(event) {
     else {
         alert("Per favore, carica un file JSON valido.")
     }
+}
+
+function undo(){
+    undoRedoManager.undo()
+    var st = undoRedoManager.getCurrentState()
+    data = st.data
+    meta = st.meta
+    setResources = st.setResources
+    selectedProjectIndex = st.selectedProjectIndex
+    selectedPhaseIndex = st.selectedPhaseIndex
+    selectedResourceIndex = st.selectedResourceIndex
+    selectedHolidayIndex = st.selectedHolidayIndex
+    currentResourceIndex = st.currentResourceIndex
+    populateProjectsTable()
+
+}
+function redo(){
+    undoRedoManager.redo()
+    var st = undoRedoManager.getCurrentState()
+    data = st.data
+    meta = st.meta
+    setResources = st.setResources
+    selectedProjectIndex = st.selectedProjectIndex
+    selectedPhaseIndex = st.selectedPhaseIndex
+    selectedResourceIndex = st.selectedResourceIndex
+    selectedHolidayIndex = st.selectedHolidayIndex
+    currentResourceIndex = st.currentResourceIndex
+    populateProjectsTable()
 }
 
 function downloadJSON() {
@@ -265,6 +313,16 @@ function newProject(){
             }
         ]
     })
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateProjectsTable()
 }
 
@@ -274,6 +332,16 @@ function cloneProject(){
     selectedResourceIndex = 0
     const clonedData = structuredClone(data[selectedProjectIndex - 1])
     data.splice(selectedProjectIndex, 0, clonedData)
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateProjectsTable()
 }
 
@@ -295,6 +363,16 @@ function newPhase(){
             }
     
     )
+    undoRedoManager.updateState({
+        "data":data, 
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populatePhasesTable()
 }
 
@@ -318,6 +396,16 @@ function addResorce(){
             )
     }
     currentResourceIndex = setResources.findIndex((element) => element.name == data[selectedProjectIndex].phases[selectedPhaseIndex].resources[selectedResourceIndex].name)
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateResourcesTable()
 }
 
@@ -327,6 +415,16 @@ function deleteProject(){
         if (data.length === selectedProjectIndex){
             selectedProjectIndex--
         }
+        undoRedoManager.updateState({
+            "data":data, 
+            "meta":meta, 
+            "setResources":setResources,
+            "selectedProjectIndex":selectedProjectIndex,
+            "selectedPhaseIndex":selectedPhaseIndex,
+            "selectedResourceIndex":selectedResourceIndex,
+            "selectedHolidayIndex":selectedHolidayIndex,
+            "currentResourceIndex":currentResourceIndex
+        })
         populateProjectsTable();
         
     } 
@@ -339,6 +437,16 @@ function deletePhase(){
         if (data[selectedProjectIndex].phases.length === selectedPhaseIndex){
             selectedPhaseIndex--  
         }
+        undoRedoManager.updateState({ 
+            "data":data,
+            "meta":meta, 
+            "setResources":setResources,
+            "selectedProjectIndex":selectedProjectIndex,
+            "selectedPhaseIndex":selectedPhaseIndex,
+            "selectedResourceIndex":selectedResourceIndex,
+            "selectedHolidayIndex":selectedHolidayIndex,
+            "currentResourceIndex":currentResourceIndex
+        })
         populatePhasesTable() 
     }
 }
@@ -351,6 +459,16 @@ function removeResource(){
         
     }
     currentResourceIndex = setResources.findIndex((element) => element.name == data[selectedProjectIndex].phases[selectedPhaseIndex].resources[selectedResourceIndex].name)
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateResourcesTable()
  }
 }
@@ -361,6 +479,16 @@ function upProject(){
         data.splice( selectedProjectIndex,1)
         selectedProjectIndex--
         data.splice( selectedProjectIndex,0,selectedData)
+        undoRedoManager.updateState({ 
+            "data":data,
+            "meta":meta, 
+            "setResources":setResources,
+            "selectedProjectIndex":selectedProjectIndex,
+            "selectedPhaseIndex":selectedPhaseIndex,
+            "selectedResourceIndex":selectedResourceIndex,
+            "selectedHolidayIndex":selectedHolidayIndex,
+            "currentResourceIndex":currentResourceIndex
+        })
         populateProjectsTable()
     } 
 }
@@ -374,6 +502,16 @@ function upPhase(){
         if (selectedPhaseIndex === 0 ){
             data[selectedProjectIndex].phases[selectedPhaseIndex]['start'] = 0
         }
+        undoRedoManager.updateState({ 
+            "data":data,
+            "meta":meta, 
+            "setResources":setResources,
+            "selectedProjectIndex":selectedProjectIndex,
+            "selectedPhaseIndex":selectedPhaseIndex,
+            "selectedResourceIndex":selectedResourceIndex,
+            "selectedHolidayIndex":selectedHolidayIndex,
+            "currentResourceIndex":currentResourceIndex
+        })
         populateProjectsTable()  
     } 
 }
@@ -383,6 +521,16 @@ function downProject(){
         data.splice( selectedProjectIndex,1)
         selectedProjectIndex++
         data.splice( selectedProjectIndex,0,selectedData)
+        undoRedoManager.updateState({
+            "data":data, 
+            "meta":meta, 
+            "setResources":setResources,
+            "selectedProjectIndex":selectedProjectIndex,
+            "selectedPhaseIndex":selectedPhaseIndex,
+            "selectedResourceIndex":selectedResourceIndex,
+            "selectedHolidayIndex":selectedHolidayIndex,
+            "currentResourceIndex":currentResourceIndex
+        })
         populateProjectsTable()
     } 
 }
@@ -393,6 +541,16 @@ function downPhase(){
         data[selectedProjectIndex].phases.splice( selectedPhaseIndex,1)
         selectedPhaseIndex++
         data[selectedProjectIndex].phases.splice( selectedPhaseIndex,0,selectedData)
+        undoRedoManager.updateState({
+            "data":data, 
+            "meta":meta, 
+            "setResources":setResources,
+            "selectedProjectIndex":selectedProjectIndex,
+            "selectedPhaseIndex":selectedPhaseIndex,
+            "selectedResourceIndex":selectedResourceIndex,
+            "selectedHolidayIndex":selectedHolidayIndex,
+            "currentResourceIndex":currentResourceIndex
+        })
         populateProjectsTable()  
     } 
 }
@@ -408,6 +566,16 @@ function updateProjectField(index, campo, value){
         }
     }
     data[index][campo] = value
+    undoRedoManager.updateState({
+        "data":data, 
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateProjectsTable()
 }
 
@@ -434,6 +602,16 @@ function updatePhaseField(index, campo, value){
         }
     }
     data[selectedProjectIndex].phases[index][campo] = value;
+    undoRedoManager.updateState({
+        "data":data, 
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populatePhasesTable()
 }
 
@@ -457,6 +635,16 @@ function updateResourceField(index, campo, value){
     
     populateResourcesTable()
     currentResourceIndex = setResources.findIndex((element) => element.name == data[selectedProjectIndex].phases[selectedPhaseIndex].resources[selectedResourceIndex].name)
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     return value
 }
 
@@ -616,7 +804,18 @@ function recalculateStartingToday(){
                 The start date will be set to today\n
                 The old date will be deleted`)){ 
         meta.creationDate = new Date().toJSON().slice(0, 10)
+        undoRedoManager.updateState({
+            "data":data, 
+            "meta":meta, 
+            "setResources":setResources,
+            "selectedProjectIndex":selectedProjectIndex,
+            "selectedPhaseIndex":selectedPhaseIndex,
+            "selectedResourceIndex":selectedResourceIndex,
+            "selectedHolidayIndex":selectedHolidayIndex,
+            "currentResourceIndex":currentResourceIndex
+        })
         updateChart(new GANTT(data,setResources,meta).getGantt())
+
     }
 }
 
@@ -662,6 +861,16 @@ function cutProjectsToday(){
     meta.creationDate = today.toJSON().slice(0, 10)
     populateProjectsTable()
     updateChart(new GANTT(data,setResources,meta).getGantt())
+    undoRedoManager.updateState({
+        "data":data, 
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateDelayTable()
 }
 }
@@ -760,6 +969,16 @@ function toggleCalendarSelection(index) {
 
 function updateCalendarField(index, campo, value){
     setResources[currentResourceIndex].holidays[index][campo] = value
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateHolidayTable()
 }
 
@@ -779,6 +998,16 @@ function newResource(){
                 }
             )
     }
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateResourcesTable()
 }
 
@@ -813,6 +1042,16 @@ function newHoliday(){
             }
     
     )
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateHolidayTable()
 }
 
@@ -842,7 +1081,16 @@ function deleteResource(){
             window.alert("Nothing to delete!")
         }
     }
-
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateResourcesManagerTable()
 }
 
@@ -852,6 +1100,16 @@ function deleteHoliday(){
         setResources[currentResourceIndex].holidays.splice( selectedHolidayIndex,1)
         if (selectedHolidayIndex > 0) selectedHolidayIndex--
     } 
+    undoRedoManager.updateState({ 
+        "data":data,
+        "meta":meta, 
+        "setResources":setResources,
+        "selectedProjectIndex":selectedProjectIndex,
+        "selectedPhaseIndex":selectedPhaseIndex,
+        "selectedResourceIndex":selectedResourceIndex,
+        "selectedHolidayIndex":selectedHolidayIndex,
+        "currentResourceIndex":currentResourceIndex
+    })
     populateHolidayTable()
 }
 

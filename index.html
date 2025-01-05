@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css">
     <link href="./defaultStyle.css" rel="stylesheet" type="text/css">
     <script type="text/javascript" src="./defaultData.js" ></script>
+    <script type="text/javascript" src="./undo-redo.js" ></script>
     <script type="text/javascript" src="./EasyGANTT.js" ></script>
     <script type="text/javascript" src="./algorithm2.js"></script>
     <link rel="icon" href="./ICON_EASYGANTT.png " type="image/png">
@@ -33,6 +34,10 @@
                 <button class="btn btn-light" onclick="downloadJSON()">
                     <i class="bi bi-download"></i>
                     Download data</button>
+                <button class="btn btn-light" onclick="undo()">
+                    <i class="bi bi-arrow-counterclockwise" ></i> Undo</button>
+                <button class="btn btn-light" onclick="redo()">
+                    <i class="bi bi-arrow-clockwise" ></i> Redo</button>
                 <button class="btn btn-light" onclick="info()">
                     <i class="bi bi-info-square fa-sm " ></i> About EasyGANTT</button>
             </div>
@@ -257,7 +262,7 @@
     </div>
     <input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
     <script>
-        rigenSetResource()
+        
         populateProjectsTable()
         updateChart(new GANTT(data, setResources, meta).getGantt())
     </script>
