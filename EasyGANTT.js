@@ -68,7 +68,6 @@ function handleFileUpload(event) {
                     "currentResourceIndex":currentResourceIndex
                 })
                 populateProjectsTable()
-                setHolidayTitle()
                 updateChart(new GANTT(data,setResources,meta).getGantt())
             } catch (err) {
                 alert("Errore nel parsing del file JSON.")

@@ -16,7 +16,24 @@
     <link rel="icon" href="./ICON_EASYGANTT.png " type="image/png">
 </head>
 <body  onload="version()">
-    <div class="row svg-justify">
+<div id="dashboard">
+    <div class="row" >
+        <label class="btn btn-light" for="uploadFile" style="margin-bottom: 0;">
+            <i class="bi bi-upload"></i>
+            Upload data</label>
+        <button class="btn btn-light" onclick="downloadJSON()">
+            <i class="bi bi-download"></i>
+            Download data</button>
+        <button class="btn btn-light" onclick="undo()">
+            <i class="bi bi-arrow-counterclockwise" ></i> Undo</button>
+        <button class="btn btn-light" onclick="redo()">
+            <i class="bi bi-arrow-clockwise" ></i> Redo</button>
+        <button class="btn btn-light" onclick="info()">
+            <i class="bi bi-info-square fa-sm " ></i> About EasyGANTT</button>
+    </div>
+</div>
+
+    <div class="row svg-justify ">
         <img src="./ICONA.svg">
     </div>
     <div class="row"></div>
@@ -26,22 +43,6 @@
 
     <div class="container-fluid">
         <div class="container-content fit auto">
-        <div class="row">
-            <div >
-                <label class="btn btn-light" for="uploadFile" style="margin-bottom: 0;">
-                    <i class="bi bi-upload"></i>
-                    Upload data</label>
-                <button class="btn btn-light" onclick="downloadJSON()">
-                    <i class="bi bi-download"></i>
-                    Download data</button>
-                <button class="btn btn-light" onclick="undo()">
-                    <i class="bi bi-arrow-counterclockwise" ></i> Undo</button>
-                <button class="btn btn-light" onclick="redo()">
-                    <i class="bi bi-arrow-clockwise" ></i> Redo</button>
-                <button class="btn btn-light" onclick="info()">
-                    <i class="bi bi-info-square fa-sm " ></i> About EasyGANTT</button>
-            </div>
-        </div>
         <div class="row  justify-content-center  ">
             <div class="col bg-light text-black">
                 <h2>Projects</h2>
@@ -256,6 +257,9 @@
     </div>
 
     </div>
+
+
+
     <div id="cookieBanner">
         <span id="cookieMessage"></span>
         <button onclick="hideBanner()">OK</button>

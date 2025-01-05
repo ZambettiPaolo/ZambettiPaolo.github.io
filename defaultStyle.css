@@ -12,7 +12,8 @@ body{
 }
 
 .svg-justify > img{
-    height: 100%;
+    margin-top: 10vh;
+    height: 50vh;
 }
 
 h1{
@@ -66,13 +67,15 @@ h4{
     margin: 0px;
 
 }
-.holidayTitle {
+
+.selected4 {
     border-radius:6px;
-    background-color: #ffa007;
-    padding:6px;
+    background-color: #77ff07;
+    padding:0px;
     margin: 0px;
 
 }
+
 
 .rowBorder {
     border: 0px;
@@ -125,6 +128,20 @@ h4{
     z-index: 1000;
     font-family: Arial, sans-serif;
 }
+#dashboard {
+    padding: 10px;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background-color: #f8f9fa;
+    color: rgb(0, 0, 0);
+    text-align: center;
+    padding: 10px;
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    box-shadow: 10px 10px 20px 5px rgba(0, 0, 0, 0.3);
+}
+
 #cookieBanner button {
     background-color: #007bff;
     border: none;
