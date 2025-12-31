@@ -16,18 +16,6 @@
     <link rel="icon" href="./ICON_EASYGANTT.png " type="image/png">
 </head>
 <body  onload="version()">
-<script>
-    fetch('https://api.countapi.xyz/hit/easygantt.net/visite')
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('contatore').innerText = data.value;
-        })
-        .catch(err => {
-            document.getElementById('contatore').innerText = 'n/d';
-        });
-</script>
-
-
 
 <div id="dashboard">
     <div class="row" >
@@ -271,8 +259,10 @@
 
     </div>
 
+<div style="text-align: right; margin: 20px; padding-botton: 6px">
+    <img src="https://hits.sh/easygantt.net.svg?label=Visite" alt="Contatore visite"/>
+</div>
 
-<p>Visit: <span id="contatore">...</span></p>
     <div id="cookieBanner">
         <span id="cookieMessage"></span>
         <button onclick="hideBanner()">OK</button>
