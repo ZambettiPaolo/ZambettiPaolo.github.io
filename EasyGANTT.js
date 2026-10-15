@@ -28,7 +28,7 @@ function esc(value) {
     })
 }
 
-const VERSION = {"major":0, "minor":4, "patch":0}
+const VERSION = {"major":0, "minor":5, "patch":0}
 var projectDelay = []
 var selectedProjectIndex = 0
 var selectedPhaseIndex = 0
