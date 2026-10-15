@@ -10,10 +10,12 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css">
     <link href="./defaultStyle.css" rel="stylesheet" type="text/css">
-    <script type="text/javascript" src="./defaultData.js" ></script>
-    <script type="text/javascript" src="./undo-redo.js" ></script>
-    <script type="text/javascript" src="./EasyGANTT.js" ></script>
+    <!-- Ordine di dipendenza: i dati, poi l'undo/redo, poi il motore di calcolo
+         (che contiene gli helper di calendario), infine l'interfaccia. -->
+    <script type="text/javascript" src="./defaultData.js"></script>
+    <script type="text/javascript" src="./undo-redo.js"></script>
     <script type="text/javascript" src="./algorithm2.js"></script>
+    <script type="text/javascript" src="./EasyGANTT.js"></script>
     <link rel="icon" href="./ICON_EASYGANTT.png " type="image/png">
 </head>
 <body  onload="version()">
@@ -30,16 +32,28 @@
             <i class="bi bi-arrow-counterclockwise" ></i> Undo</button>
         <button class="btn btn-light" onclick="redo()">
             <i class="bi bi-arrow-clockwise" ></i> Redo</button>
+        <label class="btn btn-light" style="margin-bottom: 0;">
+            <input type="checkbox" id="workWeekend" onchange="setWorkWeekend(this.checked)">
+            Work on weekends</label>
+        <button class="btn btn-light" onclick="ripristinaStatoIrreversibile()">
+            <i class="bi bi-arrow-return-left"></i> Undo last irreversible</button>
+        <button class="btn btn-light" onclick="resetToSample()">
+            <i class="bi bi-arrow-repeat"></i> Reset to sample data</button>
         <button class="btn btn-light" onclick="info()">
             <i class="bi bi-info-square fa-sm " ></i> About EasyGANTT</button>
     </div>
 </div>
 
+<div id="restoreNotice" style="display:none; background:#e7f3ff; border:1px solid #b6daff; padding:8px; margin:8px; border-radius:5px; text-align:center;">
+    Your work was restored from a draft saved in this browser. It never leaves your device.
+    <button class="btn btn-light btn-sm" onclick="resetToSample()">Reset to sample data</button>
+</div>
+
     <div class="row svg-justify ">
-        <img src="./ICONA.svg">
+        <img src="./ICONA.svg" alt="EasyGANTT">
     </div>
-    <div class="row"></div>
-        <h1 id="version">EasyGANTT</h1>
+    <div class="row">
+        <h1 id="version">EasyGANTT <span id="versionNumber"></span></h1>
     </div>
 
 
@@ -64,7 +78,7 @@
                                         <th>Penalty</th>
                                     </tr>
                                 </thead>
-                                <tbody onload="populateProjectsTable()">
+                                <tbody>
 
                                 </tbody>
                             </table>
@@ -144,7 +158,7 @@
                                         <th>Name</th>
                                     </tr>
                                 </thead>
-                                <tbody onload="populateReourceManagerTable()">
+                                <tbody>
 
                                 </tbody>
                             </table>
@@ -181,7 +195,6 @@
  
 </div>
 </div>
-</div>
 
 
 
@@ -189,7 +202,6 @@
     <div class="text-center">
         <h3>GANTT CHART</h3>
     </div>
-</div>
 <div class="col ">
     <div class="container-content">
         <div class="row fit mb-6"> 
@@ -258,7 +270,6 @@
         </div>       
     </div>
 
-    </div>
 
 <div style="text-align: right; margin: 20px; padding-botton: 6px">
     <img src="https://hits.sh/easygantt.net.svg?label=Visite" alt="Contatore visite"/>
@@ -268,31 +279,35 @@
         <span id="cookieMessage"></span>
         <button onclick="hideBanner()">OK</button>
     </div>
-    <input type="file" accept="application/json" hidden id="uploadFile" onchange="handleFileUpload(event)"></input>
+    <input type="file" accept="application/json,.json" hidden id="uploadFile" onchange="handleFileUpload(event)">
     <script>
-        
-        populateProjectsTable()
-        updateChart(new GANTT(data, setResources, meta).getGantt())
+        // Unico punto di inizializzazione: ripristina la bozza salvata nel
+        // browser se c'e', altrimenti parte dai dati di esempio.
+        restoreOrInit()
     </script>
     <script>
         function hideBanner() {
             document.getElementById('cookieBanner').style.display = 'none'
         }
-    
+
         // Determina la lingua dell'utente
         const userLang = navigator.language || navigator.userLanguage
-    
-        // Messaggi in diverse lingue
+
+        // Messaggi in diverse lingue.
+        // Nota: il testo dice ancora che non si conserva nulla nel browser, ma
+        // ora il lavoro viene salvato in locale per non perderlo fra una visita
+        // e l'altra. Va detto, perche' e' un punto di fiducia.
         const messages = {
-            'it': 'Questo sito non utilizza cookie né raccoglie dati personali per alcun motivo.',
-            'en': 'This site does not use cookies nor collect personal data for any reason.',
-            'fr': 'Ce site n\'utilise pas de cookies et ne collecte aucune donnée personnelle pour quelque raison que ce soit.',
-            'de': 'Diese Website verwendet keine Cookies und sammelt keine persönlichen Daten aus irgendeinem Grund.',
-            'es': 'Este sitio no utiliza cookies ni recopila datos personales por ningún motivo.',
+            'it': 'Questo sito non imposta cookie e non invia alcun dato a un server. Il tuo lavoro viene conservato solo nel tuo browser, e puoi cancellarlo in qualsiasi momento con "Reset to sample data".',
+            'en': 'This site sets no cookies and sends no data to any server. Your work is stored only in your own browser, and you can erase it any time with "Reset to sample data".',
+            'fr': 'Ce site n\'utilise pas de cookies et n\'envoie aucune donnee a un serveur. Votre travail est conserve uniquement dans votre navigateur, et vous pouvez l\'effacer a tout moment avec "Reset to sample data".',
+            'de': 'Diese Website setzt keine Cookies und sendet keine Daten an einen Server. Ihre Arbeit wird nur in Ihrem Browser gespeichert und kann jederzeit mit "Reset to sample data" geloscht werden.',
+            'es': 'Este sitio no usa cookies ni envia datos a ningun servidor. Su trabajo se guarda solo en su navegador y puede borrarlo cuando quiera con "Reset to sample data".',
         };
-    
+
         // Imposta il messaggio nella lingua dell'utente, se disponibile
         const message = messages[userLang.slice(0, 2)] || messages['en'] // Default to English
         document.getElementById('cookieMessage').textContent = message
     </script>
 </body>
+</html>
