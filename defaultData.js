@@ -48,6 +48,7 @@ var data = [
       {
         "name": "DESIGN",
         "duration": 12,
+        "uncertainty": 20,
         "start": 0,
         "resources": [
           {
@@ -59,6 +60,7 @@ var data = [
       {
         "name": "PURCHASE",
         "duration": 22,
+        "uncertainty": 4,
         "start": 1,
         "resources": [
           {
@@ -70,6 +72,7 @@ var data = [
       {
         "name": "ASSEMBLY",
         "duration": 18,
+        "uncertainty": 3,
         "start": 1,
         "resources": [
           {
@@ -81,6 +84,7 @@ var data = [
       {
         "name": "CERTIFICATION",
         "duration": 4,
+        "uncertainty": 1,
         "start": 1,
         "resources": [
           {
@@ -92,6 +96,7 @@ var data = [
       {
         "name": "TESTING",
         "duration": 1,
+        "uncertainty": 1,
         "start": 1,
         "resources": [
           {
@@ -118,6 +123,7 @@ var data = [
       {
         "name": "DESIGN",
         "duration": 15,
+        "uncertainty": 15,
         "start": 0,
         "resources": [
           {
@@ -129,6 +135,7 @@ var data = [
       {
         "name": "PURCHASE",
         "duration": 20,
+        "uncertainty": 5,
         "start": 1,
         "resources": [
           {
@@ -140,6 +147,7 @@ var data = [
       {
         "name": "ASSEMBLY",
         "duration": 20,
+        "uncertainty": 4,
         "start": 1,
         "resources": [
           {
@@ -151,6 +159,7 @@ var data = [
       {
         "name": "CERTIFICATION",
         "duration": 3,
+        "uncertainty": 2,
         "start": 1,
         "resources": [
           {
@@ -162,6 +171,7 @@ var data = [
       {
         "name": "TESTING",
         "duration": 1,
+        "uncertainty": 1,
         "start": 1,
         "resources": [
           {

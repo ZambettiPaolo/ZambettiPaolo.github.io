@@ -133,6 +133,48 @@ h4{
     box-shadow: 10px 10px 20px 5px rgba(0, 0, 0, 0.3);
 
 }
+/* Impostazioni: tre blocchi compatti con testi minimi. Le spiegazioni
+   estese vivranno nella pagina di help. */
+#section-settings + .container-content {
+    width: min(100%, 1000px);
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.settings-grid {
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.settings-block {
+    padding: 6px 12px 14px;
+}
+.settings-block-left h4 {
+    text-align: left;
+}
+/* Giorni lavorativi: elenco verticale, allineato a sinistra e compatto. */
+#workingDaysSettings {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin-left: 0;
+    margin-right: 0;
+}
+#workingDaysSettings .col-auto {
+    padding-left: 0;
+    padding-right: 0;
+}
+#workingDaysSettings .col-auto.m-2 {
+    margin: 2px 0 !important;
+}
+#workingDaysSettings .btn {
+    padding: 4px 8px;
+}
+@media (min-width: 768px) {
+    .settings-block + .settings-block {
+        border-left: 1px solid #e3e3e3;
+    }
+}
 /* Grafico orizzontale: le colonne mantengono la loro larghezza naturale
    invece di allargarsi per riempire la finestra, e il riquadro si chiude sul
    contenuto. Se la tabella supera la pagina, scorre solo la sua area. */
@@ -166,7 +208,10 @@ h4{
 #gantt-tables > .col-md-auto {
     position: sticky;
     left: 0;
-    z-index: 20;
+    /* Deve stare sopra l'intestazione della tabella delle date (z-index 40),
+       altrimenti i giorni e i mesi le scorrono sopra nell'angolo in alto a
+       sinistra. */
+    z-index: 60;
     background-color: #f8f9fa;
 }
 /* Intestazione a due livelli (mese e giorno) bloccata in alto. */
@@ -331,16 +376,122 @@ h4{
     flex: 0 0 auto;
 }
 #timeline-toolbar .chart-view-row > .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex: 1 1 auto;
     width: auto;
     min-width: 0;
     margin-bottom: 0;
+}
+/* Nella timeline verticale il pulsante Redraw resta solo con il pennello. */
+#timeline-toolbar .redraw-label {
+    display: none;
 }
 #timeline-toolbar .chart-view-buttons .btn {
     display: inline-flex;
     flex: 0 0 auto;
     width: auto;
     margin-bottom: 0;
+}
+/* Bordo delle celle attive del grafico orizzontale, uguale a quello delle
+   celle della timeline verticale. */
+/* Outline invece di border: con border-collapse il bordo della cella
+   attiva viene assorbito dai vicini e si vedevano solo due lati. */
+#graphic2 td.cella-fase {
+    outline: 1px solid #888;
+    outline-offset: -1px;
+}
+/* Bordo delle celle di sola ombra, come nella timeline verticale. */
+#graphic2 td.cella-ombra {
+    outline: 1px solid #e6e6e6;
+    outline-offset: -1px;
+}
+/* Casella finale della barra base: si trascina per allungare o accorciare la
+   fase; il tasto destro apre il menu. */
+.cella-fine-fase {
+    user-select: none;
+    touch-action: none;
+}
+.cella-fine-fase-h {
+    cursor: ew-resize;
+}
+.cella-fine-fase-v {
+    cursor: ns-resize;
+}
+#graphic2 td.cella-drag-target,
+#timeline-table td.cella-drag-target {
+    outline: 2px dashed #1d6fb8;
+    outline-offset: -2px;
+}
+#graphic2 td.cella-fine-fase-drag,
+#timeline-table td.cella-fine-fase-drag {
+    outline: 2px solid #1d6fb8;
+    outline-offset: -2px;
+}
+/* Menu contestuale della fase. */
+.phase-menu {
+    position: fixed;
+    z-index: 2000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    min-width: 170px;
+}
+.phase-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #222;
+}
+.phase-menu button:hover {
+    background: #f0f0f0;
+}
+/* Gantt ombra: sfumatura orizzontale da trasparente (sinistra) al colore
+   della fase (destra). Compare solo nelle celle in cui la base non e' attiva,
+   quindi non sporca mai le barre colorate. Il colore arriva da
+   --ombra-colore. */
+.cella-ombra {
+    background-image: linear-gradient(
+        to right,
+        var(--ombra-colore, #b0b0b0) 0%,
+        transparent 100%
+    );
+    background-size: 100% 100%;
+    background-position: left top;
+    background-repeat: no-repeat;
+}
+/* Nel grafico orizzontale le barre corrono lungo la riga: la stessa
+   sfumatura viene ruotata di 90 gradi (dall'alto verso il basso). Nella
+   timeline verticale resta quella da sinistra a destra. */
+#graphic2 .cella-ombra {
+    background-image: linear-gradient(
+        to bottom,
+        var(--ombra-colore, #b0b0b0) 0%,
+        transparent 100%
+    );
+}
+/* Pulsante del fantasma: l'immagine SVG e' bianca come le altre icone e la
+   scatola del pulsante ha la stessa altezza dei pulsanti con <i>. Spento,
+   mostra l'icona con la barra e diventa piu' tenue. */
+#ghostToggle {
+    min-height: calc(1.5em + 14px);
+}
+#ghostToggle img {
+    display: block;
+    width: 1.3em;
+    height: 1.3em;
+    filter: brightness(0) invert(1);
+}
+#ghostToggle.ghost-off {
+    opacity: 0.5;
 }
 #timeline-container {
     /* Il riquadro si chiude sul contenuto (pulsanti + tabella), ma non

@@ -110,8 +110,13 @@ var exportFormat = 'json'
 // fondo alla pagina). La densita' vale per entrambe le viste.
 const CHART_ORIENTATION_KEY = 'easygantt.chartOrientation'
 const CHART_DENSITY_KEY = 'easygantt.chartDensity'
+// Il "fantasma" e' la proiezione con incertezza disegnata dietro il piano
+// base. E' una preferenza di visualizzazione: non tocca i dati e non viene
+// copiata da "Copy chart".
+const GHOST_KEY = 'easygantt.ghost'
 var chartOrientation = 'horizontal'
 var chartDensity = 'normal'
+var mostraFantasma = true
 var autosaveArmed = false
 var autosaveTimer = null
 
@@ -314,6 +319,7 @@ function restoreOrInit(){
     mostraAltreRisorse = leggiMostraAltreRisorse()
     chartOrientation = leggiChartOrientation()
     chartDensity = leggiChartDensity()
+    mostraFantasma = leggiMostraFantasma()
     populateSettings()
     populateResourceSelector()
     populateProjectsTable()
@@ -418,6 +424,12 @@ function normalizeState(raw){
                     // Una fase di durata 0 non occupa nessuno slot e faceva
                     // uscire dai limiti i cicli del motore.
                     duration: clamp(num(ph.duration, 1), 1, 1000),
+                    // Giorni di incertezza aggiunti in coda alla fase. I file
+                    // precedenti non hanno il campo: valgono 0.
+                    uncertainty: clamp(num(ph.uncertainty, 0), 0, 1000),
+                    // Fase dichiarata finita dal manager: spegne il fantasma
+                    // senza cancellare l'incertezza dal dato.
+                    finished: ph.finished === true,
                     start: num(ph.start, 0) === 1 ? SEQUENCE : PARALLEL,
                     resources: (Array.isArray(ph.resources) ? ph.resources : [])
                         .filter(r => r && typeof r.name === 'string' && r.name !== '')
@@ -536,6 +548,38 @@ function toggleChartDensity(){
     setChartDensity(chartDensity === 'condensed' ? 'normal' : 'condensed')
 }
 
+// Fantasma: proiezione con incertezza. E' solo una preferenza di vista,
+// quindi non entra nella cronologia, nella bozza o nel file esportato.
+function leggiMostraFantasma(){
+    try { return localStorage.getItem(GHOST_KEY) !== 'false' } catch (e) { return true }
+}
+
+function setMostraFantasma(value){
+    mostraFantasma = !!value
+    try { localStorage.setItem(GHOST_KEY, mostraFantasma ? 'true' : 'false') } catch (e) {}
+    aggiornaPulsanteFantasma()
+    // Il fantasma e' un secondo Gantt: si ricalcola tutto, cosi' la vista
+    // orizzontale e la timeline restano allineate.
+    updateChart(new GANTT(data, setResources, meta).getGantt())
+}
+
+function toggleFantasma(){
+    setMostraFantasma(!mostraFantasma)
+}
+
+function aggiornaPulsanteFantasma(){
+    const pulsante = document.getElementById('ghostToggle')
+    if (!pulsante) return
+    pulsante.title = mostraFantasma
+        ? 'Hide the ghost (uncertainty)'
+        : 'Show the ghost (uncertainty)'
+    pulsante.setAttribute('aria-label', pulsante.title)
+    pulsante.setAttribute('aria-pressed', mostraFantasma ? 'true' : 'false')
+    const icona = pulsante.querySelector('img')
+    if (icona) icona.src = mostraFantasma ? './iconGhost.svg' : './iconGhostOff.svg'
+    pulsante.classList.toggle('ghost-off', !mostraFantasma)
+}
+
 // Aggiorna etichette e icona dei due pulsanti. L'icona della densita' mostra
 // cosa fara' il clic, come il pulsante a schermo intero dei video: "esci"
 // (angoli verso l'interno) per contrarre, "schermo intero" (angoli verso
@@ -559,6 +603,7 @@ function aggiornaOpzioniGrafico(){
         densita.setAttribute('aria-label', densita.title)
         densita.setAttribute('aria-pressed', condensata ? 'true' : 'false')
     }
+    aggiornaPulsanteFantasma()
 }
 
 // Formato scelto per "Download data". E' una preferenza del browser, non un
@@ -895,7 +940,8 @@ function populatePhasesTable() {
         phaseRow.innerHTML = `
             <td><input type="text" name="description" value="${esc(phase.name)}" style="width: 20em" maxlength="30" onchange="updatePhaseField( ${index}, 'name', this.value)"></td>
             <td><input type="number"  name="start" value="${phase.start}" min="0" max="1" step="1" onchange="updatePhaseField( ${index}, 'start', this.value)"></td>
-            <td><input type="number"  name="duration" value="${phase.duration}" min="1" max="1000" step="1" onchange="updatePhaseField( ${index}, 'duration', this.value)"></td>`
+            <td><input type="number"  name="duration" value="${phase.duration}" min="1" max="1000" step="1" onchange="updatePhaseField( ${index}, 'duration', this.value)"></td>
+            <td><input type="number"  name="uncertainty" value="${phase.uncertainty || 0}" min="0" max="1000" step="1" onchange="updatePhaseField( ${index}, 'uncertainty', this.value)"></td>`
         if (selectedPhaseIndex === index) {
             phaseRow.classList.add('selected2')
         }
@@ -1069,6 +1115,7 @@ function newProject(){
             {
                 "name": "DESIGN",
                 "duration": 1,
+                "uncertainty": 0,
                 "start": 0,
                 "resources": [
                     {
@@ -1101,6 +1148,7 @@ function newPhase(){
             {
                 "name": "DESIGN",
                 "duration": 1,
+                "uncertainty": 0,
                 "start": 0,
                 "resources": [
                     {
@@ -1271,6 +1319,15 @@ function updatePhaseField(index, campo, value){
             value = 0
         }
     }
+    if (campo === "uncertainty"){
+        value = Math.round(value)
+        if (value >1000){
+            value = 1000
+        }
+        if (value < 0){
+            value = 0
+        }
+    }
     data[selectedProjectIndex].phases[index][campo] = value;
     pushState()
     populatePhasesTable()
@@ -1326,23 +1383,23 @@ const COLORE_GIORNI_PASSATI = '#F8F1C4'
 
    L'ordine non e' per tinta crescente ma alternato: fasi consecutive (comprese
    l'ottava e la prima, che si trovano vicine quando le fasi superano otto)
-   hanno tinte lontane almeno 128 gradi, cosi' due righe adiacenti non si
-   confondono. Le tinte e i loro dosaggi sono stati scelti con una ricerca sulla
-   distanza percettiva (DeltaE su Lab): fra due colori qualsiasi DeltaE >= 23.
+   hanno tinte lontane, cosi' due righe adiacenti non si confondono. La
+   saturazione e' stata alzata un po' rispetto alla versione pastello: le
+   barre si staccano meglio dallo sfondo e dai trattini dell'ombra.
    Sono tutte piu' scure (L <= 85) del giallo dei giorni passati, che resta un
    fondo chiaro e riconoscibile.
 
    Come per la scala di impiego, i valori sono in #rrggbb e non in hsl():
    l'attributo bgcolor delle celle e' legacy e non capisce hsl(). */
 const PALETTE_FASI = [
-    '#E2AA98',   // salmone
-    '#9ADFC8',   // verde acqua
-    '#D598E2',   // lilla
-    '#B0E298',   // verde
-    '#DAA0BD',   // rosa
-    '#98C9E2',   // azzurro
-    '#E2CF98',   // ambra
-    '#BCB7EB'    // blu viola
+    '#EFA38B',   // salmone
+    '#8EEBCC',   // verde acqua
+    '#DD8BEF',   // lilla
+    '#ABEF8B',   // verde
+    '#E496BD',   // rosa
+    '#8BCDEF',   // azzurro
+    '#EFD58B',   // ambra
+    '#B5AEF4'    // blu viola
 ]
 
 // Tinta di ogni nome di fase. Il colore appartiene al NOME, non alla riga: la
@@ -1383,6 +1440,15 @@ function coloreDaCanali(canali){
 function schiarisci(colore, quantita){
     return coloreDaCanali(canaliDaEsadecimale(colore)
         .map(canale => canale + (255 - canale) * quantita))
+}
+
+// Miscela verso il grigio. I trattini dell'ombra devono ricordare il colore
+// della fase senza competere con la barra piena: al 50% restano riconoscibili
+// ma molto meno accesi.
+function desatura(colore, quantita){
+    const canali = canaliDaEsadecimale(colore)
+    const grigio = 0.299 * canali[0] + 0.587 * canali[1] + 0.114 * canali[2]
+    return coloreDaCanali(canali.map(canale => canale + (grigio - canale) * quantita))
 }
 
 // Scala a tinta unica: piu' la risorsa e' impiegata, piu' il colore e' carico.
@@ -1481,6 +1547,257 @@ function costruisciRigheVisibili(){
     return righe
 }
 
+/* Ultimo giorno in cui la fase compare nel piano base (used = 1). -1 se la
+   fase non ha slot: in quel caso non esiste un'ancora per il decadimento. */
+function fineFaseBase(days, usedIndex){
+    for (let i = days.length - 1; i >= 0; i--){
+        const day = days[i]
+        if (day && day.used[usedIndex] === 1) return i
+    }
+    return -1
+}
+
+// Indice globale di used[] per una fase (0 e' riservato alle ferie).
+function indiceUsoFase(projectIndex, phaseIndex){
+    let n = 1
+    for (let p = 0; p < data.length; p++){
+        for (let f = 0; f < data[p].phases.length; f++){
+            if (p === projectIndex && f === phaseIndex) return n
+            n++
+        }
+    }
+    return -1
+}
+
+// Dopo una modifica fatta direttamente sul grafico: cronologia, tabella fasi
+// e ridisegno immediato (qui l'azione e' sul grafico, non sulla tabella).
+function aggiornaDopoModificaFase(){
+    pushState()
+    populatePhasesTable()
+    updateChart(new GANTT(data, setResources, meta).getGantt())
+}
+
+// Click sulla casella finale della barra base: allunga la fase di un giorno.
+function estendiFase(projectIndex, phaseIndex){
+    const fase = data[projectIndex] && data[projectIndex].phases[phaseIndex]
+    if (!fase) return
+    const durata = Math.round(Number(fase.duration) || 1)
+    if (durata >= 1000) return
+    fase.duration = durata + 1
+    // Se era stata dichiarata finita, estenderla la riapre.
+    fase.finished = false
+    aggiornaDopoModificaFase()
+}
+
+// Voce del menu contestuale: chiude la fase ai giorni lavorati fino a oggi e
+// spegne il fantasma. L'incertezza resta nel dato di input.
+function dichiaraFaseFinita(projectIndex, phaseIndex){
+    const fase = data[projectIndex] && data[projectIndex].phases[phaseIndex]
+    if (!fase) return
+    const days = new GANTT(data, setResources, meta).getGantt()
+    const usedIndex = indiceUsoFase(projectIndex, phaseIndex)
+    if (usedIndex < 0) return
+    const workingDays = normalizzaGiorniLavorativi(meta.workingDays)
+    const oggi = Math.max(0, dateToDayNumber(formatISODate(new Date()), meta.creationDate, workingDays))
+    let lavorati = 0
+    let iniziata = false
+    for (let s = 0; s < days.length && s <= oggi; s++){
+        if (days[s].used[usedIndex] === 1){
+            lavorati++
+            iniziata = true
+        }
+    }
+    if (!iniziata){
+        alert('This phase has not started yet.')
+        return
+    }
+    fase.duration = Math.max(1, lavorati)
+    fase.finished = true
+    aggiornaDopoModificaFase()
+}
+
+/* Drag dell'ultima cella della barra base: spostandola a destra/sinistra
+   (o in basso/alto nella timeline) si allunga o si accorcia la durata.
+   Il delta e' in slot, quindi funziona anche con le colonne condensate. */
+var dragFase = null
+
+function iniziaDragFase(event, projectIndex, phaseIndex){
+    if (event.button !== undefined && event.button !== 0) return
+    const cella = event.currentTarget
+    if (!cella || !cella.dataset) return
+    const orizzontale = !!cella.closest('#graphic2')
+    const riga = cella.parentElement
+    const slotIniziale = Number(cella.dataset.slot !== undefined
+        ? cella.dataset.slot
+        : riga.dataset.slot)
+    if (!Number.isFinite(slotIniziale)) return
+    dragFase = {
+        projectIndex: projectIndex,
+        phaseIndex: phaseIndex,
+        orizzontale: orizzontale,
+        riga: riga,
+        cella: cella,
+        colonna: cella.cellIndex,
+        slotIniziale: slotIniziale,
+        durataIniziale: Number(data[projectIndex].phases[phaseIndex].duration) || 1,
+        target: null
+    }
+    cella.classList.add('cella-fine-fase-drag')
+    document.addEventListener('pointermove', muoviDragFase)
+    document.addEventListener('pointerup', finisciDragFase, {once: true})
+    document.addEventListener('pointercancel', annullaDragFase, {once: true})
+    event.preventDefault()
+}
+
+function muoviDragFase(event){
+    if (!dragFase) return
+    const elemento = document.elementFromPoint(event.clientX, event.clientY)
+    const td = elemento && elemento.closest ? elemento.closest('td') : null
+    if (!td) return
+    let target = null
+    if (dragFase.orizzontale){
+        if (td.parentElement === dragFase.riga && td.dataset.slot !== undefined){
+            target = td
+        }
+    }
+    else if (td.cellIndex === dragFase.colonna && td.parentElement &&
+             td.parentElement.dataset.slot !== undefined){
+        target = td
+    }
+    if (!target || target === dragFase.target) return
+    if (dragFase.target) dragFase.target.classList.remove('cella-drag-target')
+    dragFase.target = target
+    target.classList.add('cella-drag-target')
+    event.preventDefault()
+}
+
+function finisciDragFase(event){
+    document.removeEventListener('pointermove', muoviDragFase)
+    document.removeEventListener('pointercancel', annullaDragFase)
+    if (!dragFase) return
+    const drag = dragFase
+    dragFase = null
+    drag.cella.classList.remove('cella-fine-fase-drag')
+    if (!drag.target) return
+    drag.target.classList.remove('cella-drag-target')
+    const slotFinale = Number(drag.target.dataset.slot !== undefined
+        ? drag.target.dataset.slot
+        : drag.target.parentElement.dataset.slot)
+    if (!Number.isFinite(slotFinale)) return
+    const delta = slotFinale - drag.slotIniziale
+    if (delta === 0) return
+    const fase = data[drag.projectIndex] && data[drag.projectIndex].phases[drag.phaseIndex]
+    if (!fase) return
+    const nuova = Math.max(1, Math.min(1000, drag.durataIniziale + delta))
+    if (nuova === fase.duration) return
+    fase.duration = nuova
+    fase.finished = false
+    aggiornaDopoModificaFase()
+}
+
+function annullaDragFase(){
+    document.removeEventListener('pointermove', muoviDragFase)
+    if (!dragFase) return
+    dragFase.cella.classList.remove('cella-fine-fase-drag')
+    if (dragFase.target) dragFase.target.classList.remove('cella-drag-target')
+    dragFase = null
+}
+
+var menuFase = null
+
+function apriMenuFase(event, projectIndex, phaseIndex){
+    event.preventDefault()
+    event.stopPropagation()
+    menuFase = { projectIndex: projectIndex, phaseIndex: phaseIndex }
+    const menu = document.getElementById('phaseMenu')
+    if (!menu) return
+    menu.style.display = 'block'
+    const larghezza = menu.offsetWidth || 180
+    const altezza = menu.offsetHeight || 80
+    menu.style.left = Math.min(event.clientX, window.innerWidth - larghezza - 8) + 'px'
+    menu.style.top = Math.min(event.clientY, window.innerHeight - altezza - 8) + 'px'
+}
+
+function chiudiMenuFase(){
+    const menu = document.getElementById('phaseMenu')
+    if (menu) menu.style.display = 'none'
+    menuFase = null
+}
+
+function menuEstendiFase(){
+    if (!menuFase) return
+    const scelta = menuFase
+    chiudiMenuFase()
+    estendiFase(scelta.projectIndex, scelta.phaseIndex)
+}
+
+function menuDichiaraFinita(){
+    if (!menuFase) return
+    const scelta = menuFase
+    chiudiMenuFase()
+    dichiaraFaseFinita(scelta.projectIndex, scelta.phaseIndex)
+}
+
+document.addEventListener('click', function(event){
+    const menu = document.getElementById('phaseMenu')
+    if (menu && menu.style.display !== 'none' && !menu.contains(event.target)){
+        chiudiMenuFase()
+    }
+})
+document.addEventListener('keydown', function(event){
+    if (event.key === 'Escape') chiudiMenuFase()
+})
+
+/* Gantt ombra: stessa pianificazione della base, con in coda a ogni fase i
+   giorni di incertezza. Restituisce null se non c'e' nulla da disegnare. */
+function costruisciGanttOmbra(days){
+    if (!mostraFantasma || !days || !days.length) return null
+    const workingDays = normalizzaGiorniLavorativi(meta.workingDays)
+    const oggi = Math.max(0, dateToDayNumber(formatISODate(new Date()), meta.creationDate, workingDays))
+    let usedIndex = 1
+    let ciSonoIncertezze = false
+    const ombraData = data.map(project => ({
+        name: project.name,
+        delivery: project.delivery,
+        penalty: project.penalty,
+        phases: project.phases.map(phase => {
+            const u0 = Math.max(0, Math.round(Number(phase.uncertainty) || 0))
+            const fine = fineFaseBase(days, usedIndex)
+            // Niente burn: l'incertezza resta piena. Quando la fase base e'
+            // finita (fine nel passato) o e' stata dichiarata finita, il
+            // fantasma non viene piu' simulato. Il campo `uncertainty` resta
+            // comunque nei dati di input.
+            const finita = phase.finished === true || (fine >= 0 && fine < oggi)
+            const residuo = (u0 > 0 && !finita) ? u0 : 0
+            usedIndex++
+            if (residuo > 0) ciSonoIncertezze = true
+            return {
+                name: phase.name,
+                duration: phase.duration,
+                start: phase.start,
+                uncertaintyRemaining: residuo,
+                resources: phase.resources.map(res => ({ name: res.name, employed: res.employed }))
+            }
+        })
+    }))
+    if (!ciSonoIncertezze) return null
+    return new GANTT(ombraData, setResources, meta).getGantt()
+}
+
+/* L'ombra puo' arrivare oltre il piano base. Le colonne del grafico sono
+   costruite sull'array dei giorni: si aggiungono giorni vuoti in coda, cosi'
+   intestazione e barre restano allineate. */
+function estendiGiorniPerOmbra(days, ombra){
+    if (!ombra || ombra.length <= days.length) return
+    const numeroFasi = days.length ? days[0].used.length : 1
+    while (days.length < ombra.length){
+        days.push({
+            used: new Array(numeroFasi).fill(0),
+            resource: new Map()
+        })
+    }
+}
+
 /* Colonne del grafico orizzontale.
    Normale: una colonna per ogni giorno lavorativo.
    Condensata: solo le date in cui qualcosa cambia (inizio e fine di un tratto,
@@ -1488,7 +1805,7 @@ function costruisciRigheVisibili(){
    slot 0 fa sempre da prima colonna, cosi' il grafico ha un punto di partenza.
    Restituisce gli indici di slot crescenti e quelli dei periodi di ferie da
    disegnare come colonne vuote. */
-function colonneOrizzontali(days, righe){
+function colonneOrizzontali(days, righe, ombra){
     if (chartDensity !== 'condensed'){
         return { slots: days.map((day, i) => i), ferieInizio: new Set() }
     }
@@ -1501,6 +1818,14 @@ function colonneOrizzontali(days, righe){
                 confini.add(a)
                 confini.add(b - 1)
             })
+            // Anche la coda d'incertezza ha bisogno delle sue colonne: nella
+            // condensata le date-evento sono solo quelle che cambiano.
+            if (ombra){
+                trattiAttivi(ombra, faseInfo.usedIndex, true).forEach(([a, b]) => {
+                    confini.add(a)
+                    confini.add(b - 1)
+                })
+            }
         })
         const consegna = dateToDayNumber(entry.project.delivery, meta.creationDate, workingDays)
         if (consegna >= 0) confini.add(consegna)
@@ -1540,8 +1865,12 @@ function updateChart(days){
     }
 
     var workingDays = normalizzaGiorniLavorativi(meta.workingDays)
+    // L'ombra si calcola sulla base: le colonne possono allungarsi fin dove
+    // arriva la proiezione con incertezza.
+    var ombra = costruisciGanttOmbra(days)
+    estendiGiorniPerOmbra(days, ombra)
     var righe = costruisciRigheVisibili()
-    var colonne = colonneOrizzontali(days, righe)
+    var colonne = colonneOrizzontali(days, righe, ombra)
     var slots = colonne.slots
     var ferieInizio = colonne.ferieInizio
     var slotSet = new Set(slots)
@@ -1626,19 +1955,23 @@ function updateChart(days){
             // e' la percentuale che QUESTA fase assegna alla risorsa, non il
             // totale del giorno fra tutte le fasi.
             var voceRisorsa = faseInfo.voceRisorsa
+            // Il tooltip delle risorse va solo sulle celle della fase, non
+            // sulla riga intera: altrimenti compare anche sulle celle vuote.
+            var titoloRisorse = faseInfo.phase.resources
+                .map(res => `${res.name}: ${res.employed}`)
+                .join(' / ')
+            // Ultima cella della barra base: e' il punto su cui si agisce.
+            var fineFase = fineFaseBase(days, faseInfo.usedIndex)
             slots.forEach(index => {
                 var day = days[index]
+                var ombraGiorno = ombra ? ombra[index] : null
+                var inOmbra = !!(ombraGiorno && ombraGiorno.used[faseInfo.usedIndex] !== 0)
                 // Barra di consegna: una striscia rossa sul lato sinistro
                 // della cella, senza cambiare la larghezza della colonna.
                 var stileConsegna = consegna === index
-                    ? " style=\"box-shadow: inset 3px 0 0 #dc3545\" title=\"Delivery\""
-                    : ""
-                // Colonna delle ferie: vuota e grigia, come la riga grigia
-                // della timeline verticale condensata.
-                if (ferieInizio.has(index)){
-                    dayString = dayString + `<td bgcolor="#ececec"${stileConsegna}></td>`
-                    return
-                }
+                    ? ' style="box-shadow: inset 3px 0 0 #dc3545"'
+                    : ''
+                var titoloConsegnaAttr = consegna === index ? ' title="Delivery"' : ''
                 if (day.used[faseInfo.usedIndex]===1){
                     if (risorsa !== ''){
                         // Giorno occupato dalla risorsa in evidenza (colore
@@ -1647,23 +1980,50 @@ function updateChart(days){
                     }
                     else {
                         // Vista normale: la tinta del nome della fase (uguale
-                        // per le fasi omonime). Il tratto gia' passato e' la
-                        // stessa tinta schiarita.
+                        // per le fasi omonime), identica anche nel passato.
                         color = coloreFase(coloriFasi, faseInfo.phase.name)
-                        if ((deltaDay-index) > 0) color = schiarisci(color, 0.3)
                     }
-                    dayString = `${dayString} <td bgcolor="${color}"${stileConsegna}></td>`
+                    var titoloCella = titoloRisorse
+                    if (consegna === index){
+                        titoloCella = titoloCella ? `${titoloCella} / Delivery` : 'Delivery'
+                    }
+                    var eFinale = index === fineFase
+                    if (eFinale){
+                        titoloCella = (titoloCella ? titoloCella + ' · ' : '') +
+                            'Drag to resize; right-click: options'
+                    }
+                    var titoloCellaAttr = titoloCella ? ` title="${esc(titoloCella)}"` : ''
+                    var classeFinale = eFinale ? ' cella-fine-fase cella-fine-fase-h' : ''
+                    var azioneFinale = eFinale
+                        ? ` onpointerdown="iniziaDragFase(event, ${entry.projectIndex}, ${faseInfo.phaseIndex})"` +
+                          ` oncontextmenu="apriMenuFase(event, ${entry.projectIndex}, ${faseInfo.phaseIndex}); return false"`
+                        : ''
+                    dayString = `${dayString} <td data-slot="${index}" class="cella-fase${classeFinale}" bgcolor="${color}"${titoloCellaAttr}${stileConsegna}${azioneFinale}></td>`
+                }
+                else if (inOmbra){
+                    // Solo ombra: trattini dello stesso colore della fase,
+                    // senza riempire la cella ne' toccare le basi.
+                    var coloreOmbra = risorsa !== ''
+                        ? (voceRisorsa ? coloreImpiego(voceRisorsa.employed) : COLORE_ALTRE_RISORSE)
+                        : coloreFase(coloriFasi, faseInfo.phase.name)
+                    coloreOmbra = desatura(coloreOmbra, 0.5)
+                    coloreOmbra = schiarisci(coloreOmbra, 0.35)
+                    var stileOmbra = consegna === index
+                        ? ` style="box-shadow: inset 3px 0 0 #dc3545;--ombra-colore:${coloreOmbra}" title="Ghost (with uncertainty) / delivery"`
+                        : ` style="--ombra-colore:${coloreOmbra}" title="Ghost (with uncertainty)"`
+                    dayString = dayString + `<td data-slot="${index}" class="cella-ombra"${stileOmbra}></td>`
+                }
+                else if (ferieInizio.has(index)){
+                    // Colonna delle ferie: grigia solo dove la fase non sta
+                    // lavorando. Una ferie di un'altra risorsa non deve
+                    // nascondere il lavoro di questa.
+                    dayString = dayString + `<td data-slot="${index}" bgcolor="#ececec"${stileConsegna}${titoloConsegnaAttr}></td>`
                 }
                 else {
-                    if((deltaDay-index) > 0){dayString = dayString + `<td bgcolor='${COLORE_GIORNI_PASSATI}'${stileConsegna}></td>`}else{dayString = dayString + `<td${stileConsegna}></td>`}
+                    if((deltaDay-index) > 0){dayString = dayString + `<td data-slot="${index}" bgcolor='${COLORE_GIORNI_PASSATI}'${stileConsegna}${titoloConsegnaAttr}></td>`}else{dayString = dayString + `<td data-slot="${index}"${stileConsegna}${titoloConsegnaAttr}></td>`}
                 }
             })
             rowData.innerHTML = dayString
-            var stringResorces = ""
-            faseInfo.phase.resources.forEach(res => {
-                stringResorces = `${stringResorces} ${res.name}: ${res.employed}\n`
-            })
-            rowData.setAttribute('title', stringResorces);
             tableBody.appendChild(rowData)
             dayString=""
         })
@@ -1708,7 +2068,13 @@ function updateChart(days){
         if (entry.nascosto) return
         entry.fasi.forEach(faseInfo => {
             var tableRow = document.createElement('tr')
-            tableRow.innerHTML = `<td>${esc(faseInfo.phase.name)}</td>` + striscia(faseInfo.phase.name)
+            // Il tooltip delle risorse sta sul nome della fase: e' il punto
+            // naturale in cui guardarle, e non sulle celle vuote del grafico.
+            const titoloRisorse = faseInfo.phase.resources
+                .map(res => `${res.name}: ${res.employed}`)
+                .join(' / ')
+            const titoloAttr = titoloRisorse ? ` title="${esc(titoloRisorse)}"` : ''
+            tableRow.innerHTML = `<td${titoloAttr}>${esc(faseInfo.phase.name)}</td>` + striscia(faseInfo.phase.name)
             tableBody.appendChild(tableRow)
         })
     })
@@ -1751,11 +2117,15 @@ function nomeVerticale(testo){
 }
 
 // Tratti contigui in cui la fase e' attiva, in indici di slot.
-function trattiAttivi(days, usedIndex){
+function trattiAttivi(days, usedIndex, qualsiasiUso){
     const tratti = []
     let inizio = null
     for (let d = 0; d < days.length; d++){
-        const attivo = days[d].used[usedIndex] === 1
+        // Nel piano base solo used=1 e' un giorno della fase; nell'ombra
+        // anche used=2 (coda di incertezza) va considerato attivo.
+        const attivo = qualsiasiUso
+            ? days[d].used[usedIndex] !== 0
+            : days[d].used[usedIndex] === 1
         if (attivo && inizio === null) inizio = d
         if (!attivo && inizio !== null){
             tratti.push([inizio, d])
@@ -1771,6 +2141,8 @@ function trattiAttivi(days, usedIndex){
 // risorsa selezionata).
 function costruisciCopiaGrafico(perSito){
     const workingDays = normalizzaGiorniLavorativi(meta.workingDays)
+    // Solo piano base: il fantasma (incertezza) e' una proiezione a schermo
+    // e non deve finire nella copia del grafico.
     const days = new GANTT(data, setResources, meta).getGantt()
     if (!days || !days.length) return null
 
@@ -2064,7 +2436,9 @@ function renderTimeline(days){
         contenitore.innerHTML = '<p class="text-center">No chart data.</p>'
         return
     }
-    const risultato = costruisciTimeline(days, chartDensity === 'condensed')
+    const ombra = costruisciGanttOmbra(days)
+    estendiGiorniPerOmbra(days, ombra)
+    const risultato = costruisciTimeline(days, chartDensity === 'condensed', ombra)
     intestazione.innerHTML = risultato.header
     contenitore.innerHTML = risultato.body
     sincronizzaTimelineHeader()
@@ -2081,7 +2455,7 @@ function sincronizzaTimelineHeader(){
 /* Unico costruttore della timeline del sito. La versione condensata non e'
    piu' la tabella dell'email: parte da questa e cambia solo quali date
    diventano righe (tutti i giorni lavorativi oppure solo le date-evento). */
-function costruisciTimeline(days, condensata){
+function costruisciTimeline(days, condensata, ombra){
     const workingDays = normalizzaGiorniLavorativi(meta.workingDays)
     const coloriFasi = (function () {
         const tutte = []
@@ -2108,7 +2482,12 @@ function costruisciTimeline(days, condensata){
     gruppi.forEach(g => {
         colonne.push({ tipo: 'progetto', gruppo: g })
         if (!g.nascosto){
-            g.entry.fasi.forEach(f => colonne.push({ tipo: 'fase', gruppo: g, fase: f }))
+            g.entry.fasi.forEach(f => colonne.push({
+                tipo: 'fase',
+                gruppo: g,
+                fase: f,
+                fineBase: fineFaseBase(days, f.usedIndex)
+            }))
         }
     })
 
@@ -2126,6 +2505,12 @@ function costruisciTimeline(days, condensata){
                 confini.add(a)
                 confini.add(b - 1)
             })
+            if (ombra){
+                trattiAttivi(ombra, col.fase.usedIndex, true).forEach(([a, b]) => {
+                    confini.add(a)
+                    confini.add(b - 1)
+                })
+            }
         })
         gruppi.forEach(g => {
             if (g.consegna >= 0) confini.add(g.consegna)
@@ -2183,7 +2568,15 @@ function costruisciTimeline(days, condensata){
             const colore = risorsaInEvidenza === ''
                 ? coloreFase(coloriFasi, col.fase.phase.name)
                 : '#cccccc'
-            headerHtml += `<th style="width:32px;border:1px solid #ccc;padding:2px;background:#fafafa;` +
+            // Tooltip risorse sul nome della fase, come nel grafico
+            // orizzontale.
+            const risorseIntestazione = col.fase.phase.resources
+                .map(res => `${res.name}: ${res.employed}`)
+                .join(' / ')
+            const titoloIntestazione = risorseIntestazione
+                ? ` title="${esc(risorseIntestazione)}"`
+                : ''
+            headerHtml += `<th${titoloIntestazione} style="width:32px;border:1px solid #ccc;padding:2px;background:#fafafa;` +
                 `text-align:center;vertical-align:bottom;border-bottom:3px solid ${colore}">` +
                 `<div style="font-size:12px;line-height:1;writing-mode:vertical-rl;transform:rotate(180deg);text-orientation:mixed;white-space:nowrap">` +
                 `${esc(col.fase.phase.name)}</div></th>`
@@ -2207,7 +2600,7 @@ function costruisciTimeline(days, condensata){
             ? etichetta + '<br><span style="font-size:11px;color:#555;font-weight:normal">' +
               durate.join('<br>') + '</span>'
             : etichetta
-        bodyHtml += '<tr>'
+        bodyHtml += `<tr data-slot="${slot}">`
         bodyHtml += `<td style="width:160px;border:1px solid #ccc;padding:2px 4px;` +
             `background:${festivo ? '#f0f0f0' : '#fafafa'};white-space:nowrap;font-weight:bold">${cellaData}</td>`
         colonne.forEach(col => {
@@ -2217,27 +2610,63 @@ function costruisciTimeline(days, condensata){
                 return
             }
             const f = col.fase
-            const attivo = !!(giorno && !festivo && giorno.used[f.usedIndex] === 1)
+            // Il lavoro effettivo prevale sulla fascia delle ferie: una
+            // ferie di un'altra risorsa non deve nascondere questa fase.
+            const attivo = !!(giorno && giorno.used[f.usedIndex] === 1)
+            const ombraGiorno = ombra ? ombra[slot] : null
+            const inOmbra = !!(ombraGiorno && ombraGiorno.used[f.usedIndex] !== 0)
+            const soloOmbra = inOmbra && !attivo
             const passato = slot < oggiSlot
             let sfondo = festivo ? '#f7f7f7' : (passato ? COLORE_GIORNI_PASSATI : '#ffffff')
+            if (soloOmbra) sfondo = '#ffffff'
             if (attivo){
                 if (risorsaInEvidenza === ''){
+                    // Stessa tinta sia nel passato sia nel futuro.
                     sfondo = coloreFase(coloriFasi, f.phase.name)
-                    // Come nel grafico orizzontale: il tratto gia' passato e'
-                    // la stessa tinta resa piu' tenue.
-                    if (passato) sfondo = schiarisci(sfondo, 0.3)
                 } else {
                     sfondo = f.voceRisorsa
                         ? coloreImpiego(f.voceRisorsa.employed)
                         : COLORE_ALTRE_RISORSE
                 }
             }
+            // Trattini dell'ombra: solo dove la base non c'e', con lo stesso
+            // colore della fase (piu' tenue se il giorno e' passato).
+            let coloreOmbra = risorsaInEvidenza === ''
+                ? coloreFase(coloriFasi, f.phase.name)
+                : (f.voceRisorsa ? coloreImpiego(f.voceRisorsa.employed) : COLORE_ALTRE_RISORSE)
+            coloreOmbra = desatura(coloreOmbra, 0.5)
+            coloreOmbra = schiarisci(coloreOmbra, 0.35)
             const consegna = col.gruppo.consegna
+            const eFinale = attivo && slot === col.fineBase
+            // Tooltip: risorse solo sulle celle attive della fase; il
+            // fantasma ha il suo; le celle vuote non hanno tooltip.
+            const titoloRisorse = f.phase.resources
+                .map(res => `${res.name}: ${res.employed}`)
+                .join(' / ')
+            let titoloCella = attivo ? titoloRisorse : (soloOmbra ? 'Ghost (with uncertainty)' : '')
+            if (slot === consegna){
+                titoloCella = titoloCella ? `${titoloCella} / Delivery` : 'Delivery'
+            }
+            if (eFinale){
+                titoloCella = (titoloCella ? titoloCella + ' · ' : '') +
+                    'Drag to resize; right-click: options'
+            }
+            const titoloCellaAttr = titoloCella ? ` title="${esc(titoloCella)}"` : ''
+            const classi = [soloOmbra ? 'cella-ombra' : '',
+                eFinale ? 'cella-fine-fase cella-fine-fase-v' : '']
+                .filter(Boolean).join(' ')
+            const classeAttr = classi ? ` class="${classi}"` : ''
+            const azioneFinale = eFinale
+                ? ` onpointerdown="iniziaDragFase(event, ${col.gruppo.entry.projectIndex}, ${f.phaseIndex})"` +
+                  ` oncontextmenu="apriMenuFase(event, ${col.gruppo.entry.projectIndex}, ${f.phaseIndex}); return false"`
+                : ''
             const contenuto = (slot === consegna)
                 ? '<div style="height:2px;background:#dc3545;font-size:0;line-height:0">&nbsp;</div>'
                 : '&nbsp;'
-            bodyHtml += `<td style="width:32px;height:30px;background-color:${sfondo};` +
-                `border:1px solid ${attivo ? '#888' : '#eee'};vertical-align:middle">${contenuto}</td>`
+            bodyHtml += `<td${classeAttr}${titoloCellaAttr} ` +
+                `style="width:32px;height:30px;background-color:${sfondo};` +
+                `border:1px solid ${attivo ? '#888' : (soloOmbra ? '#e6e6e6' : '#eee')};vertical-align:middle` +
+                `${soloOmbra ? `;--ombra-colore:${coloreOmbra}` : ''}"${azioneFinale}>${contenuto}</td>`
         })
         bodyHtml += '</tr>'
     })

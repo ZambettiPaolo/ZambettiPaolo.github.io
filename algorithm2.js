@@ -18,6 +18,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 const PARALLEL = 0
 const SEQUENCE = 1
 
+/* Quota delle risorse usata dalla coda di incertezza, rispetto all'impiego
+   della fase base. Con una base al 100% la coda vale 50: sommata a un'altra
+   fase al 50% resta dentro il tetto del 100% del motore, mentre accostata al
+   grafico base rappresenta la sovrapposizione 100% + 50% = 150%. Il tetto
+   dell'algoritmo non cambia. */
+const UNCERTAINTY_RESOURCE_SHARE = 0.5
+
 /* ---------------------------------------------------------------------------
    Helper puri di calendario.
 
@@ -141,6 +148,7 @@ class GANTT{
         // malformata) non puo' bloccare i cicli di conversione.
         this.creationDate = meta.creationDate
         this.workingDays = giorniLavorativiDaMeta(meta)
+        this.uncertaintyShare = UNCERTAINTY_RESOURCE_SHARE
         this.phaseIndex = 1
         this.numberOfPhases = 0
         this.setNumberOfPhases()
@@ -193,7 +201,6 @@ class GANTT{
 
     getGantt(){
         this.extendToDeliveries()
-        console.log(this.solution)
         return this.solution
     }
 
@@ -312,7 +319,45 @@ class GANTT{
                 while (!isFree)
                 currentDay++
             }
+            // Coda di incertezza: e' una fase in piu' attaccata alla base, con
+            // una quota ridotta delle stesse risorse. Il numero di giorni e'
+            // gia' stato decurtato dal tempo trascorso (uncertaintyRemaining),
+            // quindi qui il motore non ha bisogno di sapere che giorno e' oggi.
+            // used = 2 distingue la coda dalla base (used = 1) nel disegno.
+            var giorniIncertezza = Math.max(0, Math.round(Number(phase.uncertaintyRemaining) || 0))
+            for (let i = 0; i < giorniIncertezza; i++){
+                do{
+                    isFree = true
+                    if (this.solution.length <= currentDay){
+                        var newDayIncertezza = this.getNewDay()
+                        newDayIncertezza.used[this.phaseIndex] = 2
+                        phase.resources.forEach(res => {
+                            newDayIncertezza.resource.set(
+                                res.name, res.employed * this.uncertaintyShare)
+                        })
+                        this.solution[currentDay] = newDayIncertezza
+                    }
+                    else{
+                        isFree = phase.resources.every(res =>
+                            (res.employed * this.uncertaintyShare +
+                             this.solution[currentDay].resource.get(res.name)) <= 100)
+                        if (isFree){
+                            phase.resources.forEach(res => {
+                                var impiego = this.solution[currentDay].resource.get(res.name)
+                                this.solution[currentDay].resource.set(
+                                    res.name, impiego + res.employed * this.uncertaintyShare)
+                            })
+                            this.solution[currentDay].used[this.phaseIndex] = 2
+                        }
+                        else{
+                            currentDay++
+                        }
+                    }
+                }
+                while (!isFree)
+                currentDay++
+            }
             this.phaseIndex++
-        })    
-   } 
+        })
+   }
 }

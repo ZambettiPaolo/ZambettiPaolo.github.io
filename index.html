@@ -102,10 +102,11 @@
                                     <th>Description</th>
                                     <th>Start</th>
                                     <th>Duration</th>
+                                    <th title="Extra working days, drawn as a gray shadow; they burn down day by day">Uncertainty</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                
+
                             </tbody>
                         </table>
                     
@@ -206,10 +207,20 @@
     <div class="container-content">
         <div class="row fit mb-6" id="gantt-toolbar">
             <div class="col-auto chart-view-row">
-        <!-- Pulsanti solo icona a sinistra di Redraw: ruotano il grafico e
-             alternano la vista condensata. In verticale restano sulla stessa
-             riga e occupano la stessa larghezza dei pulsanti sottostanti. -->
+        <!-- Ordine: Redraw, fantasma, ruota, espandi. I tre pulsanti solo
+             icona restano sulla stessa riga e, in verticale, occupano la
+             larghezza dei pulsanti sottostanti. -->
+        <button class="btn btn-info no-wrap" onclick="updateChart(new GANTT(data,setResources,meta).getGantt())">
+        <i class="bi bi-brush"></i>
+        <span class="redraw-label">Redraw</span>
+        </button>
         <span class="chart-view-buttons">
+            <button class="btn btn-info" type="button" id="ghostToggle"
+                    onclick="toggleFantasma()"
+                    title="Hide the ghost (uncertainty)"
+                    aria-label="Hide the ghost (uncertainty)" aria-pressed="true">
+                <img src="./iconGhost.svg" alt="" aria-hidden="true">
+            </button>
             <button class="btn btn-info" type="button" id="orientationToggle"
                     onclick="toggleChartOrientation()"
                     title="Show the chart vertically" aria-label="Show the chart vertically">
@@ -222,10 +233,6 @@
                 <i class="bi bi-fullscreen-exit"></i>
             </button>
         </span>
-        <button class="btn btn-info no-wrap" onclick="updateChart(new GANTT(data,setResources,meta).getGantt())">
-        <i class="bi bi-brush"></i>
-        Redraw
-        </button>
         </div>
         <div class="col "> 
         <button class="btn btn-warning no-wrap" onclick="recalculateStartingToday()">
@@ -323,29 +330,25 @@
     <h3>SETTINGS</h3>
 </div>
 <div class="container-content fit auto">
-    <div class="row  justify-content-center  ">
-        <div class="col bg-light text-black">
-            <p class="text-center">
-                Select the weekly working days.
-            </p>
+    <div class="row justify-content-center bg-light text-black settings-grid">
+        <!-- Testi brevi: le spiegazioni estese andranno nella pagina di help. -->
+        <div class="col-md-4 settings-block settings-block-left">
+            <h4>Working days</h4>
             <div class="row justify-content-center" id="workingDaysSettings">
                 <!-- Dynamic Content -->
             </div>
-            <p class="text-center mt-4">
-                Resource view
-            </p>
+        </div>
+        <div class="col-md-4 settings-block">
+            <h4>Resource view</h4>
             <div class="row justify-content-center">
                 <label class="btn btn-light no-wrap mb-0 m-2">
                     <input type="checkbox" id="showOtherResources" onchange="setMostraAltreRisorse(this.checked)">
-                    Show other resources in gray
+                    Other resources in gray
                 </label>
             </div>
-            <p class="text-center">
-                When a resource is highlighted, keep the phases of the other resources visible in gray.
-            </p>
-            <p class="text-center mt-4">
-                File format used by the download button.
-            </p>
+        </div>
+        <div class="col-md-4 settings-block">
+            <h4>Download format</h4>
             <div class="row justify-content-center" id="exportFormatSettings">
                 <label class="btn btn-light no-wrap mb-0 m-2">
                     <input type="radio" name="exportFormat" value="json" onchange="setExportFormat(this.value)">
@@ -356,10 +359,6 @@
                     HTML
                 </label>
             </div>
-            <p class="text-center">
-                JSON is a small, portable backup. HTML opens EasyGANTT with the data already loaded
-                when you double-click it (it needs an internet connection).
-            </p>
         </div>
     </div>
 </div>
@@ -368,6 +367,10 @@
     <img src="https://hits.sh/easygantt.net.svg?label=Visite" alt="Contatore visite"/>
 </div>
 
+    <div id="phaseMenu" class="phase-menu" style="display:none">
+        <button type="button" onclick="menuEstendiFase()">Extend by 1 day</button>
+        <button type="button" onclick="menuDichiaraFinita()">Mark as finished</button>
+    </div>
     <div id="cookieBanner">
         <span id="cookieMessage"></span>
         <button onclick="hideBanner()">OK</button>
