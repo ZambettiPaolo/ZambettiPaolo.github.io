@@ -50,50 +50,80 @@ function formatISODate(date) {
     return `${anno}-${mese}-${giorno}`
 }
 
-// Unico punto in cui si decide cosa e' un giorno lavorativo.
-function isWorkingDay(date, workWeekend) {
-    if (workWeekend) return true
-    const g = date.getDay()
-    return g !== 0 && g !== 6
+/* Giorni lavorativi: una lista di 7 flag, un flag alzato significa giorno
+   lavorativo. L'indice e' quello di Date.getDay(), 0 = domenica ... 6 = sabato,
+   cosi' la lista salvata nel JSON si legge con lo stesso indice che usa il
+   calendario. Sostituisce il vecchio interruttore booleano "workWeekend", che
+   ammetteva solo due configurazioni: lunedi'-venerdi' oppure tutti i giorni. */
+const DEFAULT_WORKING_DAYS = [false, true, true, true, true, true, false]
+const ALL_WORKING_DAYS = [true, true, true, true, true, true, true]
+
+// Riporta una lista qualsiasi a 7 flag booleani con almeno un giorno
+// lavorativo. Una lista vuota o tutta a false non e' utilizzabile: i cicli di
+// conversione fra date e slot non troverebbero mai un giorno lavorativo e non
+// terminerebbero. Restituisce sempre una copia, cosi' chi la modifica non
+// tocca l'oggetto conservato in meta.
+function normalizzaGiorniLavorativi(lista) {
+    if (Array.isArray(lista) && lista.length === 7 && lista.some(Boolean)) {
+        return lista.map(Boolean)
+    }
+    return DEFAULT_WORKING_DAYS.slice()
 }
 
-// Primo giorno lavorativo >= creationDate. Con workWeekend l'epoch e'
-// creationDate stessa, qualunque giorno sia.
-function epochDate(creationDate, workWeekend) {
+// Traduce il meta di un file (o della bozza) nella lista di 7 flag. I file
+// scritti prima di questa versione portavano il solo interruttore booleano
+// "workWeekend": alzato significava "tutti i giorni sono lavorativi", abbassato
+// (o assente) lunedi'-venerdi'.
+function giorniLavorativiDaMeta(rawMeta) {
+    const meta = rawMeta || {}
+    if (Array.isArray(meta.workingDays)) return normalizzaGiorniLavorativi(meta.workingDays)
+    if (meta.workWeekend) return ALL_WORKING_DAYS.slice()
+    return DEFAULT_WORKING_DAYS.slice()
+}
+
+// Unico punto in cui si decide cosa e' un giorno lavorativo. La lista viene
+// normalizzata qui e non solo a monte: cosi' nessuna chiamata puo' bloccare un
+// ciclo per una lista assente o malformata.
+function isWorkingDay(date, workingDays) {
+    return normalizzaGiorniLavorativi(workingDays)[date.getDay()]
+}
+
+// Primo giorno lavorativo >= creationDate.
+function epochDate(creationDate, workingDays) {
     const d = parseISODate(creationDate)
-    while (!isWorkingDay(d, workWeekend)) d.setDate(d.getDate() + 1)
+    while (!isWorkingDay(d, workingDays)) d.setDate(d.getDate() + 1)
     return d
 }
 
 // Indice dello slot che contiene `value`. 0 = epoch, negativo se precedente.
 // Inversa esatta di dayNumberToDate.
-function dateToDayNumber(value, creationDate, workWeekend) {
-    const epoch = epochDate(creationDate, workWeekend)
+function dateToDayNumber(value, creationDate, workingDays) {
+    const epoch = epochDate(creationDate, workingDays)
     const target = parseISODate(value)
     const cursore = new Date(epoch)
     let n = 0
     while (cursore < target) {
-        if (isWorkingDay(cursore, workWeekend)) n++
+        if (isWorkingDay(cursore, workingDays)) n++
         cursore.setDate(cursore.getDate() + 1)
     }
     while (cursore > target) {
         cursore.setDate(cursore.getDate() - 1)
-        if (isWorkingDay(cursore, workWeekend)) n--
+        if (isWorkingDay(cursore, workingDays)) n--
     }
     return n
 }
 
 // Data del giorno lavorativo numero `n`. Inversa esatta di dateToDayNumber.
-function dayNumberToDate(n, creationDate, workWeekend) {
-    const d = epochDate(creationDate, workWeekend)
+function dayNumberToDate(n, creationDate, workingDays) {
+    const d = epochDate(creationDate, workingDays)
     let k = 0
     while (k < n) {
         d.setDate(d.getDate() + 1)
-        if (isWorkingDay(d, workWeekend)) k++
+        if (isWorkingDay(d, workingDays)) k++
     }
     while (k > n) {
         d.setDate(d.getDate() - 1)
-        if (isWorkingDay(d, workWeekend)) k--
+        if (isWorkingDay(d, workingDays)) k--
     }
     return d
 }
@@ -106,10 +136,11 @@ class GANTT{
         this.setResources = setResources
         this.meta = meta
         // Unica fonte di verita' per la conversione date <-> indici di slot.
-        // `meta.workWeekend` assente significa false: i file salvati prima di
-        // questa versione si ricaricano esattamente come prima.
+        // I giorni lavorativi si normalizzano qui, all'ingresso del motore: un
+        // chiamante che passa un meta senza il campo (o con una lista
+        // malformata) non puo' bloccare i cicli di conversione.
         this.creationDate = meta.creationDate
-        this.workWeekend = !!meta.workWeekend
+        this.workingDays = giorniLavorativiDaMeta(meta)
         this.phaseIndex = 1
         this.numberOfPhases = 0
         this.setNumberOfPhases()
@@ -157,12 +188,29 @@ class GANTT{
     // updateChart, e per questo le ferie finivano disegnate un giorno piu' in
     // la'. Ora delega all'helper condiviso.
     dateToDayNumber(date){
-        return dateToDayNumber(date, this.creationDate, this.workWeekend)
+        return dateToDayNumber(date, this.creationDate, this.workingDays)
     }
 
     getGantt(){
+        this.extendToDeliveries()
         console.log(this.solution)
         return this.solution
+    }
+
+    // Allunga il grafico fino all'ultima consegna. Senza questo, una consegna
+    // successiva all'ultima fase non aveva una colonna su cui disegnare la
+    // barra rossa (e la data non compariva affatto nell'intestazione). I giorni
+    // aggiunti sono vuoti: non spostano la fine delle fasi ne' i ritardi,
+    // perche' calcProjecDelay ignora gli slot finali non occupati.
+    extendToDeliveries(){
+        var lastDelivery = -1
+        this.data.forEach(project => {
+            var slot = this.dateToDayNumber(project.delivery)
+            if (slot > lastDelivery) lastDelivery = slot
+        })
+        while (this.solution.length <= lastDelivery){
+            this.solution.push(this.getNewDay())
+        }
     }
 
     insertHoliday(resource){

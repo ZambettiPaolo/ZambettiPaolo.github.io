@@ -3,7 +3,7 @@ var setResources = [
     "name":"ALL",
     "holidays":[
       {
-        "startDate":"2024-12-18",
+        "startDate":"2026-10-26",
         "duration": 11,
         "employed": 100
       }
@@ -13,12 +13,12 @@ var setResources = [
     "name":"DESIGNER",
     "holidays":[
       {
-        "startDate":"2025-01-02",
+        "startDate":"2026-09-14",
         "duration": 5,
         "employed": 100
       },
       {
-        "startDate":"2025-03-15",
+        "startDate":"2026-11-02",
         "duration": 10,
         "employed": 100
       }
@@ -28,7 +28,7 @@ var setResources = [
     "name":"PURCHASING OFFI",
     "holidays":[
       {
-      "startDate":"2025-04-15",
+      "startDate":"2026-09-28",
       "duration": 10,
       "employed": 100
       }
@@ -36,12 +36,13 @@ var setResources = [
   }
 ]
 var meta = {
-  "creationDate": "2024-12-01"
+  "creationDate": "2026-09-01",
+  "workingDays": [false, true, true, true, true, true, false]
 }
 var data = [
   {
     "name": "COFFEE MACHINE",
-    "delivery": "2024-11-15",
+    "delivery": "2026-12-11",
     "penalty": 2,
     "phases": [
       {
@@ -111,7 +112,7 @@ var data = [
   },
   {
     "name": "ICE CREAM MACHINE",
-    "delivery": "2024-11-28",
+    "delivery": "2026-12-18",
     "penalty": 8,
     "phases": [
       {
