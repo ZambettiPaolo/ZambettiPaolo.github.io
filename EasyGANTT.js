@@ -1916,7 +1916,7 @@ function colonneOrizzontali(days, righe, ombra){
             // Anche la coda d'incertezza ha bisogno delle sue colonne: nella
             // condensata le date-evento sono solo quelle che cambiano.
             if (ombra){
-                trattiAttivi(ombra, faseInfo.usedIndex, true).forEach(([a, b]) => {
+                trattiAttivi(ombra, faseInfo.usedIndex, 2).forEach(([a, b]) => {
                     confini.add(a)
                     confini.add(b - 1)
                 })
@@ -2060,7 +2060,7 @@ function updateChart(days){
             slots.forEach(index => {
                 var day = days[index]
                 var ombraGiorno = ombra ? ombra[index] : null
-                var inOmbra = !!(ombraGiorno && ombraGiorno.used[faseInfo.usedIndex] !== 0)
+                var inOmbra = !!(ombraGiorno && ombraGiorno.used[faseInfo.usedIndex] === 2)
                 // Barra di consegna: una striscia rossa sul lato sinistro
                 // della cella, senza cambiare la larghezza della colonna.
                 var stileConsegna = consegna === index
@@ -2212,15 +2212,17 @@ function nomeVerticale(testo){
 }
 
 // Tratti contigui in cui la fase e' attiva, in indici di slot.
-function trattiAttivi(days, usedIndex, qualsiasiUso){
+function trattiAttivi(days, usedIndex, modo){
     const tratti = []
     let inizio = null
     for (let d = 0; d < days.length; d++){
-        // Nel piano base solo used=1 e' un giorno della fase; nell'ombra
-        // anche used=2 (coda di incertezza) va considerato attivo.
-        const attivo = qualsiasiUso
-            ? days[d].used[usedIndex] !== 0
-            : days[d].used[usedIndex] === 1
+        // Nel piano base solo used=1 e' un giorno della fase. Nell'ombra:
+        // modo=2 considera solo la coda di incertezza (used=2), modo=true
+        // considera tutta l'ombra (base spostata + coda).
+        let attivo
+        if (modo === 2) attivo = days[d].used[usedIndex] === 2
+        else if (modo) attivo = days[d].used[usedIndex] !== 0
+        else attivo = days[d].used[usedIndex] === 1
         if (attivo && inizio === null) inizio = d
         if (!attivo && inizio !== null){
             tratti.push([inizio, d])
@@ -2601,7 +2603,7 @@ function costruisciTimeline(days, condensata, ombra){
                 confini.add(b - 1)
             })
             if (ombra){
-                trattiAttivi(ombra, col.fase.usedIndex, true).forEach(([a, b]) => {
+                trattiAttivi(ombra, col.fase.usedIndex, 2).forEach(([a, b]) => {
                     confini.add(a)
                     confini.add(b - 1)
                 })
@@ -2709,7 +2711,7 @@ function costruisciTimeline(days, condensata, ombra){
             // ferie di un'altra risorsa non deve nascondere questa fase.
             const attivo = !!(giorno && giorno.used[f.usedIndex] === 1)
             const ombraGiorno = ombra ? ombra[slot] : null
-            const inOmbra = !!(ombraGiorno && ombraGiorno.used[f.usedIndex] !== 0)
+            const inOmbra = !!(ombraGiorno && ombraGiorno.used[f.usedIndex] === 2)
             const soloOmbra = inOmbra && !attivo
             const passato = slot < oggiSlot
             let sfondo = festivo ? '#f7f7f7' : (passato ? COLORE_GIORNI_PASSATI : '#ffffff')
