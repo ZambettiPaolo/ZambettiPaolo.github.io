@@ -15,6 +15,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
 
+// start delle fasi:
+//   0  = inizio della fase precedente (per la prima: inizio progetto)
+//   1  = dopo la fine della fase precedente
+//   -n = inizio della (n+1)-esima fase precedente
+//        (-1 = due posti indietro, -2 = tre posti indietro, ...)
 const PARALLEL = 0
 const SEQUENCE = 1
 
@@ -199,6 +204,15 @@ class GANTT{
         return dateToDayNumber(date, this.creationDate, this.workingDays)
     }
 
+    // Primo giorno occupato da una fase (indice globale di used[]). Serve
+    // alle fasi che partono all'inizio di una fase precedente.
+    primoGiornoUso(usedIndex){
+        for (let d = 0; d < this.solution.length; d++){
+            if (this.solution[d].used[usedIndex] !== 0) return d
+        }
+        return 0
+    }
+
     getGantt(){
         this.extendToDeliveries()
         return this.solution
@@ -264,15 +278,24 @@ class GANTT{
     insertProject(project){
         var currentDay = 0
         project.phases.forEach((phase, index) => {
-            if (index!=0){ //cerca il giorno in cui cominciare a inserire la fase se PARALLEL
-                if (phase.start===PARALLEL){
+            if (index != 0){
+                const s = Math.round(Number(phase.start) || 0)
+                if (s === SEQUENCE){
+                    // currentDay resta dopo la fine della fase precedente.
+                }
+                else if (s <= 0){
+                    // 0 = inizio della precedente; -1 = due posti indietro;
+                    // -2 = tre posti indietro; e cosi' via. Il riferimento e'
+                    // sempre a una fase gia' schedulata, quindi niente cicli.
+                    const k = 1 - s
+                    const rif = this.phaseIndex - k
+                    const primoProgetto = this.phaseIndex - index
+                    currentDay = rif >= primoProgetto ? this.primoGiornoUso(rif) : 0
+                }
+                else {
+                    // Valore non valido (la validazione lo impedisce): si
+                    // riparte dall'inizio del progetto.
                     currentDay = 0
-                    // Il limite superiore evita il TypeError che si aveva quando
-                    // la fase precedente non compariva in nessun giorno (per
-                    // esempio una fase di durata 0): senza limite l'indice
-                    // usciva dall'array e this.solution[currentDay] era undefined.
-                    while (currentDay < this.solution.length &&
-                           this.solution[currentDay].used[this.phaseIndex-1]===0){currentDay++}
                 }
             }
             for(let i = 0; i < phase.duration; i++){

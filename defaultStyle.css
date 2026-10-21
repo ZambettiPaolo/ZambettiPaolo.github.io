@@ -118,6 +118,56 @@ h4{
     padding: 0;
     border-left: 1px solid #dee2e6;
 }
+/* Triangolo dell'ancora: sempre presente, invisibile finche' la fase
+   selezionata non punta a quella riga. Sinistra = inizio, destra = fine. */
+#phasesTable td.descrizione-fase {
+    position: relative;
+}
+#phasesTable td.descrizione-fase input[name="description"] {
+    margin-left: 16px;
+    margin-right: 16px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+#phasesTable .triangolo {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ffb300;
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.65);
+}
+#phasesTable .triangolo-inizio {
+    left: 2px;
+}
+#phasesTable .triangolo-fine {
+    right: 2px;
+}
+#phasesTable .triangolo.ancora-attiva {
+    opacity: 1;
+}
+/* Start: gruppo Bootstrap standard, due frecce affiancate, senza numero. */
+#phasesTable .start-stepper .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 6px;
+    font-size: 12px;
+    line-height: 1;
+    color: #495057;
+    background-color: #fff;
+    border-color: #ced4da;
+}
+#phasesTable .start-stepper .btn .bi {
+    font-size: 11px;
+}
+#phasesTable .start-stepper .btn:disabled {
+    opacity: 0.4;
+}
 .slider-container {
     overflow-x: auto;
     padding: 0;

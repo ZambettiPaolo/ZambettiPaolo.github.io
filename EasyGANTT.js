@@ -38,7 +38,7 @@ if (STATO_INCORPORATO) {
     setResources = STATO_INCORPORATO.setResources
 }
 
-const VERSION = {"major":0, "minor":5, "patch":0}
+const VERSION = {"major":0, "minor":5, "patch":1}
 var projectDelay = []
 var selectedProjectIndex = 0
 var selectedPhaseIndex = 0
@@ -419,7 +419,7 @@ function normalizeState(raw){
             penalty: clamp(num(p.penalty, 0), 0, 10),
             phases: (Array.isArray(p.phases) ? p.phases : [])
                 .filter(ph => ph && ph.name !== undefined)
-                .map(ph => ({
+                .map((ph, phaseIndex) => ({
                     name: String(ph.name),
                     // Una fase di durata 0 non occupa nessuno slot e faceva
                     // uscire dai limiti i cicli del motore.
@@ -430,7 +430,7 @@ function normalizeState(raw){
                     // Fase dichiarata finita dal manager: spegne il fantasma
                     // senza cancellare l'incertezza dal dato.
                     finished: ph.finished === true,
-                    start: num(ph.start, 0) === 1 ? SEQUENCE : PARALLEL,
+                    start: limitaStart(ph.start, phaseIndex),
                     resources: (Array.isArray(ph.resources) ? ph.resources : [])
                         .filter(r => r && typeof r.name === 'string' && r.name !== '')
                         .map(r => ({ name: r.name, employed: clamp(num(r.employed, 100), 1, 100) }))
@@ -936,10 +936,30 @@ function populatePhasesTable() {
     phasesTableBody.innerHTML = ''
     var project = data[selectedProjectIndex]
     project.phases.forEach((phase, index) => {
+        var startAttuale = limitaStart(phase.start, index)
+        var minimoStart = index === 0 ? 0 : 1 - index
+        var massimoStart = index === 0 ? 0 : 1
+        // Frecce invertite: su = ancora piu' indietro (start piu' negativo),
+        // giu' = ancora piu' avanti (verso 1).
+        var suDisabilitato = startAttuale <= minimoStart
+        var giuDisabilitato = startAttuale >= massimoStart
         var phaseRow = document.createElement('tr')
         phaseRow.innerHTML = `
-            <td><input type="text" name="description" value="${esc(phase.name)}" style="width: 20em" maxlength="30" onchange="updatePhaseField( ${index}, 'name', this.value)"></td>
-            <td><input type="number"  name="start" value="${phase.start}" min="0" max="1" step="1" onchange="updatePhaseField( ${index}, 'start', this.value)"></td>
+            <td class="descrizione-fase">
+                <span class="triangolo triangolo-inizio" aria-hidden="true">▶</span>
+                <input type="text" name="description" value="${esc(phase.name)}" style="width: 20em" maxlength="30" onchange="updatePhaseField( ${index}, 'name', this.value)">
+                <span class="triangolo triangolo-fine" aria-hidden="true">◀</span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm start-stepper" role="group" aria-label="Start reference" title="Up = earlier reference; down = later reference. 0 = start with the previous phase; -1 = two back; -2 = three back; 1 = after the previous phase.">
+                    <button type="button" class="btn btn-light" onclick="cambiaStart(${index}, -1)" aria-label="Earlier start" title="Earlier start" ${suDisabilitato ? 'disabled' : ''}>
+                        <i class="bi bi-caret-up-fill"></i>
+                    </button>
+                    <button type="button" class="btn btn-light" onclick="cambiaStart(${index}, 1)" aria-label="Later start" title="Later start" ${giuDisabilitato ? 'disabled' : ''}>
+                        <i class="bi bi-caret-down-fill"></i>
+                    </button>
+                </div>
+            </td>
             <td><input type="number"  name="duration" value="${phase.duration}" min="1" max="1000" step="1" onchange="updatePhaseField( ${index}, 'duration', this.value)"></td>
             <td><input type="number"  name="uncertainty" value="${phase.uncertainty || 0}" min="0" max="1000" step="1" onchange="updatePhaseField( ${index}, 'uncertainty', this.value)"></td>`
         if (selectedPhaseIndex === index) {
@@ -947,9 +967,10 @@ function populatePhasesTable() {
         }
         phaseRow.classList.add("rowBorder")
         phaseRow.addEventListener('click', function() { togglePhaseSelection(index) })
-        phasesTableBody.appendChild(phaseRow)   
+        phasesTableBody.appendChild(phaseRow)
     })
     populateResourcesTable()
+    aggiornaAncoreFasi()
 }
 
 function populateResourcesTable() {
@@ -1078,6 +1099,7 @@ function togglePhaseSelection(index) {
         }
     });
     populateResourcesTable()
+    aggiornaAncoreFasi()
 
 }
 
@@ -1250,12 +1272,15 @@ function upPhase(){
         data[selectedProjectIndex].phases.splice( selectedPhaseIndex,1)
         selectedPhaseIndex--
         data[selectedProjectIndex].phases.splice( selectedPhaseIndex,0,selectedData)
-        if (selectedPhaseIndex === 0 ){
-            data[selectedProjectIndex].phases[selectedPhaseIndex]['start'] = 0
+        // Salendo di una posizione, un riferimento negativo deve crescere di
+        // uno per continuare a puntare alla stessa fase precedente.
+        if (selectedData.start < 0){
+            selectedData.start += 1
         }
+        selectedData.start = limitaStart(selectedData.start, selectedPhaseIndex)
         pushState()
-        populateProjectsTable()  
-    } 
+        populateProjectsTable()
+    }
 }
 function downProject(){
     if (data.length > 1 && selectedProjectIndex < data.length-1){
@@ -1274,9 +1299,16 @@ function downPhase(){
         data[selectedProjectIndex].phases.splice( selectedPhaseIndex,1)
         selectedPhaseIndex++
         data[selectedProjectIndex].phases.splice( selectedPhaseIndex,0,selectedData)
+        // Regola simmetrica a Up: scendendo, il riferimento deve calare di
+        // uno per puntare ancora alla stessa fase. Anche 0 va decrementato:
+        // la vecchia "precedente" diventa due posti indietro.
+        if (selectedData.start <= 0){
+            selectedData.start -= 1
+        }
+        selectedData.start = limitaStart(selectedData.start, selectedPhaseIndex)
         pushState()
-        populateProjectsTable()  
-    } 
+        populateProjectsTable()
+    }
 }
 
 function updateProjectField(index, campo, value){
@@ -1294,6 +1326,78 @@ function updateProjectField(index, campo, value){
     populateProjectsTable()
 }
 
+// Un valore di start valido per una fase in posizione `index` (0-based):
+// 1 = dopo la precedente; 0 = inizio della precedente; -n = n+1 posti
+// indietro. La prima fase puo' stare solo a 0.
+function limitaStart(value, index){
+    let s = Math.round(Number(value) || 0)
+    if (index <= 0) return 0
+    if (s > 1) s = 1
+    const minimo = 1 - index
+    if (s < minimo) s = minimo
+    return s
+}
+
+// Stepper dello start: cambia il valore senza input editabile.
+function cambiaStart(index, delta){
+    const fasi = data[selectedProjectIndex] && data[selectedProjectIndex].phases
+    if (!fasi || !fasi[index]) return
+    const attuale = limitaStart(fasi[index].start, index)
+    const nuovo = limitaStart(attuale + delta, index)
+    if (nuovo === attuale) return
+    fasi[index].start = nuovo
+    pushState()
+    populatePhasesTable()
+}
+
+// Triangolo sull'ancora della fase selezionata: a sinistra per un inizio,
+// a destra per una fine (start = 1).
+function aggiornaAncoreFasi(){
+    const righe = document.querySelectorAll('#phasesTable tbody tr')
+    righe.forEach(riga => {
+        riga.classList.remove('fase-ancora')
+        riga.querySelectorAll('.triangolo').forEach(tri => {
+            tri.classList.remove('ancora-attiva')
+            tri.removeAttribute('title')
+        })
+    })
+    const fasi = data[selectedProjectIndex] && data[selectedProjectIndex].phases
+    if (!fasi || !fasi.length || selectedPhaseIndex < 0 || selectedPhaseIndex >= fasi.length) return
+    const fase = fasi[selectedPhaseIndex]
+    const s = limitaStart(fase.start, selectedPhaseIndex)
+    let rif
+    let lato
+    if (s === 1){
+        rif = selectedPhaseIndex - 1
+        lato = 'fine'
+    }
+    else {
+        const k = 1 - s
+        rif = selectedPhaseIndex - k
+        lato = 'inizio'
+    }
+    if (rif < 0){
+        const riga = righe[selectedPhaseIndex]
+        const tri = riga && riga.querySelector('.triangolo-inizio')
+        if (tri){
+            tri.classList.add('ancora-attiva')
+            tri.title = 'Starts at the project start'
+        }
+        return
+    }
+    const riga = righe[rif]
+    const faseRif = fasi[rif]
+    if (!riga || !faseRif) return
+    riga.classList.add('fase-ancora')
+    const tri = riga.querySelector(lato === 'fine' ? '.triangolo-fine' : '.triangolo-inizio')
+    if (tri){
+        tri.classList.add('ancora-attiva')
+        tri.title = lato === 'fine'
+            ? `Starts after the end of ${faseRif.name}`
+            : `Starts with ${faseRif.name}`
+    }
+}
+
 function updatePhaseField(index, campo, value){
     if (campo === "duration"){
         value = Math.round(value)
@@ -1308,16 +1412,7 @@ function updatePhaseField(index, campo, value){
         }
     }
     if (campo === "start"){
-        value = Math.round(value)
-        if (value >1){
-            value = 1
-        }
-        if (value < 0){
-            value = 0
-        }
-        if (index === 0){
-            value = 0
-        }
+        value = limitaStart(value, index)
     }
     if (campo === "uncertainty"){
         value = Math.round(value)
@@ -2728,28 +2823,37 @@ function copyChart(){
 }
 
 function calcProjecDelay(days){
-    var result = []
-    var phaseIndex = 0
-    var finishDay = 0
-    data.forEach((pro, index )=>{
-        var scadenza = parseISODate(pro.delivery)
-        phaseIndex = phaseIndex + pro.phases.length
-        finishDay = days.length
-        // Il limite inferiore evita di scendere a indici negativi: days[-1] e'
-        // undefined, e il confronto successivo lanciava un TypeError che
-        // impediva l'aggiornamento del grafico. Succedeva, per esempio, con una
-        // fase di durata 0, che non compare in nessun giorno.
-        while (finishDay > 0 && days[finishDay-1].used[phaseIndex-1]===0){
-            finishDay--
+    if (!days || !days.length) return data.map(() => 0)
+    // Ultimo giorno occupato da OGNI fase. Non basta l'ultima fase della
+    // lista: con fasi PARALLEL una fase precedente puo' finire dopo
+    // l'ultima, e il progetto finisce con la piu' tardiva di tutte.
+    const ultimoUso = new Array(days[0].used.length).fill(-1)
+    let mancanti = ultimoUso.length - 1   // l'indice 0 sono le ferie
+    for (let d = days.length - 1; d >= 0 && mancanti > 0; d--){
+        const used = days[d].used
+        for (let i = 1; i < used.length; i++){
+            if (used[i] !== 0 && ultimoUso[i] < 0){
+                ultimoUso[i] = d
+                mancanti--
+            }
         }
-        // finishDay e' l'indice dell'ultimo slot occupato PIU' UNO, quindi
-        // l'ultimo slot e' finishDay-1. Il ritardo e' la differenza fra quello
-        // e lo slot della data di consegna. Prima si sottraeva calcDayDate(),
-        // che contava i feriali con una base diversa (inclusiva della data
-        // iniziale): le due basi non coincidevano ed e' per questo che il
-        // risultato era sfasato.
-        result[index] = (finishDay-1) - dateToDayNumber(formatISODate(scadenza), meta.creationDate, meta.workingDays)
-     })
+    }
+    const result = []
+    let usedIndex = 1
+    data.forEach((pro, index) => {
+        let fineProgetto = -1
+        pro.phases.forEach(() => {
+            if (ultimoUso[usedIndex] > fineProgetto) fineProgetto = ultimoUso[usedIndex]
+            usedIndex++
+        })
+        const scadenza = dateToDayNumber(
+            formatISODate(parseISODate(pro.delivery)),
+            meta.creationDate,
+            meta.workingDays)
+        // fineProgetto e' l'indice dell'ultimo slot occupato dalla fase piu'
+        // tardiva del progetto; il ritardo e' la distanza dalla consegna.
+        result[index] = fineProgetto - scadenza
+    })
     return result
 }
 
