@@ -118,6 +118,20 @@ h4{
     padding: 0;
     border-left: 1px solid #dee2e6;
 }
+/* Intestazione Duration D/H su una sola riga e campo un po' più largo. */
+#durationHeader,
+#uncertaintyHeader {
+    white-space: nowrap;
+}
+#phasesTable input[name="duration"],
+#phasesTable input[name="uncertainty"] {
+    min-width: 64px;
+}
+/* Elenco delle risorse assegnate: nessuna linea tra le righe. */
+#resourcesTable tbody td,
+#resourcesTable tbody th {
+    border-top: 0;
+}
 /* Triangolo dell'ancora: sempre presente, invisibile finche' la fase
    selezionata non punta a quella riga. Sinistra = inizio, destra = fine. */
 #phasesTable td.descrizione-fase {
@@ -201,6 +215,13 @@ h4{
 .settings-block-left h4 {
     text-align: left;
 }
+.units-note {
+    margin: 8px 10px 0;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: #555;
+    text-align: center;
+}
 /* Giorni lavorativi: elenco verticale, allineato a sinistra e compatto. */
 #workingDaysSettings {
     flex-direction: column;
@@ -220,7 +241,7 @@ h4{
 #workingDaysSettings .btn {
     padding: 4px 8px;
 }
-@media (min-width: 768px) {
+@media (min-width: 992px) {
     .settings-block + .settings-block {
         border-left: 1px solid #e3e3e3;
     }

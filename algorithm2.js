@@ -125,6 +125,31 @@ function dateToDayNumber(value, creationDate, workingDays) {
     return n
 }
 
+// Capacità giornaliera della fase: somma delle percentuali delle risorse
+// (1 = una risorsa a tempo pieno). Senza risorse si assume 1.
+function capacitaGiornaliera(phase){
+    const capacita = (phase.resources || []).reduce(
+        (totale, res) => totale + (Number(res.employed) || 0) / 100, 0)
+    return capacita > 0 ? capacita : 1
+}
+
+// Durata effettiva in giorni della fase. In modalità "hours":
+// ceil(ore / (8 * capacità giornaliera)), con il limite dei giorni.
+function durataGiorniEffettiva(phase, durationUnit){
+    const durata = Math.max(1, Math.round(Number(phase.duration) || 1))
+    if (durationUnit !== 'hours') return durata
+    const giorni = Math.ceil(durata / (8 * capacitaGiornaliera(phase)))
+    return Math.min(1000, Math.max(1, giorni))
+}
+
+// Incertezza in giorni. È un tempo, non un effort: in modalità ore si usano
+// 8 ore = 1 giorno lavorativo, senza dividere per la capacità delle risorse.
+function incertezzaGiorni(phase, durationUnit){
+    const u = Math.max(0, Math.round(Number(phase.uncertainty) || 0))
+    if (durationUnit !== 'hours') return u
+    return Math.min(1000, Math.ceil(u / 8))
+}
+
 // Data del giorno lavorativo numero `n`. Inversa esatta di dateToDayNumber.
 function dayNumberToDate(n, creationDate, workingDays) {
     const d = epochDate(creationDate, workingDays)
@@ -153,6 +178,7 @@ class GANTT{
         // malformata) non puo' bloccare i cicli di conversione.
         this.creationDate = meta.creationDate
         this.workingDays = giorniLavorativiDaMeta(meta)
+        this.durationUnit = meta.durationUnit === 'hours' ? 'hours' : 'days'
         this.uncertaintyShare = UNCERTAINTY_RESOURCE_SHARE
         this.phaseIndex = 1
         this.numberOfPhases = 0
@@ -298,7 +324,10 @@ class GANTT{
                     currentDay = 0
                 }
             }
-            for(let i = 0; i < phase.duration; i++){
+            // In modalità ore la durata del motore e' derivata da ore e
+            // capacità delle risorse; in modalità giorni e' il valore stesso.
+            const giorniBase = durataGiorniEffettiva(phase, this.durationUnit)
+            for(let i = 0; i < giorniBase; i++){
                 do{
                     var isFree = true
                     var emp = 0

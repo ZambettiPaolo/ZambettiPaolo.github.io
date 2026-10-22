@@ -389,13 +389,16 @@ function normalizeState(raw){
 
     const creation = parseISODate(raw.meta.creationDate)
     if (!isDataValida(creation)) return null
+    const durationUnit = raw.meta.durationUnit === 'hours' ? 'hours' : 'days'
 
     const meta = {
         creationDate: formatISODate(creation),
         // Campo introdotto da questa versione. I file precedenti portavano il
         // solo interruttore "workWeekend": giorniLavorativiDaMeta() lo traduce,
         // cosi' si ricaricano con lo stesso calendario di prima.
-        workingDays: giorniLavorativiDaMeta(raw.meta)
+        workingDays: giorniLavorativiDaMeta(raw.meta),
+        // "days" o "hours": il valore di phase.duration va letto di conseguenza.
+        durationUnit: durationUnit
     }
 
     const setResources = raw.setResources
@@ -422,11 +425,13 @@ function normalizeState(raw){
                 .map((ph, phaseIndex) => ({
                     name: String(ph.name),
                     // Una fase di durata 0 non occupa nessuno slot e faceva
-                    // uscire dai limiti i cicli del motore.
-                    duration: clamp(num(ph.duration, 1), 1, 1000),
-                    // Giorni di incertezza aggiunti in coda alla fase. I file
-                    // precedenti non hanno il campo: valgono 0.
-                    uncertainty: clamp(num(ph.uncertainty, 0), 0, 1000),
+                    // uscire dai limiti i cicli del motore. In modalita' ore
+                    // il limite e' piu' alto, perche' il valore e' un effort.
+                    duration: limitaDurata(num(ph.duration, 1), durationUnit),
+                    // Tempo di incertezza aggiunto in coda alla fase, nella
+                    // stessa unità della durata. I file precedenti non hanno
+                    // il campo e valgono 0.
+                    uncertainty: limitaIncertezza(num(ph.uncertainty, 0), durationUnit),
                     // Fase dichiarata finita dal manager: spegne il fantasma
                     // senza cancellare l'incertezza dal dato.
                     finished: ph.finished === true,
@@ -489,6 +494,18 @@ function populateSettings(){
     document.querySelectorAll('input[name="exportFormat"]').forEach(radio => {
         radio.checked = radio.value === exportFormat
     })
+    document.querySelectorAll('input[name="durationUnit"]').forEach(radio => {
+        radio.checked = radio.value === (meta.durationUnit === 'hours' ? 'hours' : 'days')
+    })
+    const intestazioneDurata = document.getElementById('durationHeader')
+    if (intestazioneDurata){
+        intestazioneDurata.textContent = meta.durationUnit === 'hours' ? 'Duration H' : 'Duration D'
+    }
+    const intestazioneIncertezza = document.getElementById('uncertaintyHeader')
+    if (intestazioneIncertezza){
+        intestazioneIncertezza.textContent = meta.durationUnit === 'hours'
+            ? 'Uncertainty H' : 'Uncertainty D'
+    }
     const altreRisorse = document.getElementById('showOtherResources')
     if (altreRisorse) altreRisorse.checked = mostraAltreRisorse
     aggiornaPulsanteDownload()
@@ -617,6 +634,44 @@ function setExportFormat(formato){
     exportFormat = formato === 'html' ? 'html' : 'json'
     try { localStorage.setItem(EXPORT_FORMAT_KEY, exportFormat) } catch (e) {}
     aggiornaPulsanteDownload()
+}
+
+// Cambia l'unita' del campo duration. La conversione arrotonda per eccesso
+// ore/giorni, quindi avvisa e chiede conferma prima di applicarla.
+function setDurationUnit(value){
+    const nuova = value === 'hours' ? 'hours' : 'days'
+    const attuale = meta.durationUnit === 'hours' ? 'hours' : 'days'
+    if (nuova === attuale){
+        populateSettings()
+        return
+    }
+    const messaggio = nuova === 'hours'
+        ? 'Convert durations and uncertainties from days to hours?\n\nDurations are converted with ceil(days × 8 × employment); uncertainties with 8 hours = 1 working day. Durations are rounded up: with low resource percentages this can make a phase significantly longer (at 1% capacity, one hour is 12.5 days).\n\nContinue?'
+        : 'Convert durations and uncertainties from hours to days?\n\nDurations are converted with ceil(hours / (8 × employment)); uncertainties with ceil(hours / 8). Both are rounded up; some phases may become longer.\n\nContinue?'
+    if (!confirm(messaggio)){
+        populateSettings()
+        return
+    }
+    data.forEach(project => project.phases.forEach(phase => {
+        const capacita = capacitaGiornaliera(phase)
+        if (nuova === 'hours'){
+            phase.duration = limitaDurata(
+                Math.ceil(Number(phase.duration) * 8 * capacita), 'hours')
+            phase.uncertainty = limitaIncertezza(
+                Number(phase.uncertainty) * 8, 'hours')
+        }
+        else {
+            phase.duration = limitaDurata(
+                Math.ceil(Number(phase.duration) / (8 * capacita)), 'days')
+            phase.uncertainty = limitaIncertezza(
+                Math.ceil(Number(phase.uncertainty) / 8), 'days')
+        }
+    }))
+    meta.durationUnit = nuova
+    pushState()
+    populateSettings()
+    populatePhasesTable()
+    updateChart(new GANTT(data, setResources, meta).getGantt())
 }
 
 function aggiornaPulsanteDownload(){
@@ -960,8 +1015,8 @@ function populatePhasesTable() {
                     </button>
                 </div>
             </td>
-            <td><input type="number"  name="duration" value="${phase.duration}" min="1" max="1000" step="1" onchange="updatePhaseField( ${index}, 'duration', this.value)"></td>
-            <td><input type="number"  name="uncertainty" value="${phase.uncertainty || 0}" min="0" max="1000" step="1" onchange="updatePhaseField( ${index}, 'uncertainty', this.value)"></td>`
+            <td><input type="number" name="duration" value="${phase.duration}" min="1" max="${meta.durationUnit === 'hours' ? 100000 : 1000}" step="1" title="${meta.durationUnit === 'hours' ? 'Duration in hours' : 'Duration in days'}" onchange="updatePhaseField( ${index}, 'duration', this.value)"></td>
+            <td><input type="number" name="uncertainty" value="${phase.uncertainty || 0}" min="0" max="${meta.durationUnit === 'hours' ? 8000 : 1000}" step="1" title="${meta.durationUnit === 'hours' ? 'Uncertainty in hours' : 'Uncertainty in days'}" onchange="updatePhaseField( ${index}, 'uncertainty', this.value)"></td>`
         if (selectedPhaseIndex === index) {
             phaseRow.classList.add('selected2')
         }
@@ -1136,7 +1191,7 @@ function newProject(){
         "phases": [
             {
                 "name": "DESIGN",
-                "duration": 1,
+                "duration": meta.durationUnit === 'hours' ? 8 : 1,
                 "uncertainty": 0,
                 "start": 0,
                 "resources": [
@@ -1169,7 +1224,7 @@ function newPhase(){
          
             {
                 "name": "DESIGN",
-                "duration": 1,
+                "duration": meta.durationUnit === 'hours' ? 8 : 1,
                 "uncertainty": 0,
                 "start": 0,
                 "resources": [
@@ -1338,6 +1393,25 @@ function limitaStart(value, index){
     return s
 }
 
+// Limite del campo duration: giorni oppure ore, secondo l'unità del progetto.
+function limitaDurata(value, unit){
+    let v = Math.round(Number(value) || 1)
+    const massimo = unit === 'hours' ? 100000 : 1000
+    if (v < 1) v = 1
+    if (v > massimo) v = massimo
+    return v
+}
+
+// L'incertezza può essere 0 (nessun rischio). In ore il tetto è 8000
+// (1000 giorni × 8 ore), in giorni 1000.
+function limitaIncertezza(value, unit){
+    let v = Math.round(Number(value) || 0)
+    const massimo = unit === 'hours' ? 8000 : 1000
+    if (v < 0) v = 0
+    if (v > massimo) v = massimo
+    return v
+}
+
 // Stepper dello start: cambia il valore senza input editabile.
 function cambiaStart(index, delta){
     const fasi = data[selectedProjectIndex] && data[selectedProjectIndex].phases
@@ -1400,30 +1474,21 @@ function aggiornaAncoreFasi(){
 
 function updatePhaseField(index, campo, value){
     if (campo === "duration"){
-        value = Math.round(value)
-        if (value >1000){
-            value = 1000
-        }
-        // Minimo 1, coerente con min="1" dell'input. Prima era ammesso 0, ma
-        // una fase di durata 0 non occupa nessuno slot e mandava fuori dai
-        // limiti i cicli del motore.
-        if (value < 1){
-            value = 1
-        }
+        // Il valore è in giorni o in ore, secondo l'unità del progetto.
+        value = limitaDurata(value, meta.durationUnit)
     }
     if (campo === "start"){
         value = limitaStart(value, index)
     }
     if (campo === "uncertainty"){
-        value = Math.round(value)
-        if (value >1000){
-            value = 1000
-        }
-        if (value < 0){
-            value = 0
-        }
+        value = limitaIncertezza(value, meta.durationUnit)
     }
-    data[selectedProjectIndex].phases[index][campo] = value;
+    const fase = data[selectedProjectIndex].phases[index]
+    // Modificare la durata di una fase dichiarata finita la riapre.
+    if (campo === "duration" && Number(fase.duration) !== Number(value)){
+        fase.finished = false
+    }
+    fase[campo] = value
     pushState()
     populatePhasesTable()
 }
@@ -1672,8 +1737,10 @@ function aggiornaDopoModificaFase(){
     updateChart(new GANTT(data, setResources, meta).getGantt())
 }
 
-// Click sulla casella finale della barra base: allunga la fase di un giorno.
+// Allunga la fase di un giorno (drag o voce del menu). In modalità ore la
+// durata è derivata, quindi l'azione è disattivata.
 function estendiFase(projectIndex, phaseIndex){
+    if (meta.durationUnit === 'hours') return
     const fase = data[projectIndex] && data[projectIndex].phases[phaseIndex]
     if (!fase) return
     const durata = Math.round(Number(fase.duration) || 1)
@@ -1706,7 +1773,14 @@ function dichiaraFaseFinita(projectIndex, phaseIndex){
         alert('This phase has not started yet.')
         return
     }
-    fase.duration = Math.max(1, lavorati)
+    if (meta.durationUnit === 'hours'){
+        // L'effort residuo è espresso in ore: giorni lavorati × capacità.
+        fase.duration = limitaDurata(
+            Math.ceil(lavorati * 8 * capacitaGiornaliera(fase)), 'hours')
+    }
+    else {
+        fase.duration = limitaDurata(lavorati, 'days')
+    }
     fase.finished = true
     aggiornaDopoModificaFase()
 }
@@ -1717,6 +1791,7 @@ function dichiaraFaseFinita(projectIndex, phaseIndex){
 var dragFase = null
 
 function iniziaDragFase(event, projectIndex, phaseIndex){
+    if (meta.durationUnit === 'hours') return
     if (event.button !== undefined && event.button !== 0) return
     const cella = event.currentTarget
     if (!cella || !cella.dataset) return
@@ -1806,6 +1881,10 @@ function apriMenuFase(event, projectIndex, phaseIndex){
     menuFase = { projectIndex: projectIndex, phaseIndex: phaseIndex }
     const menu = document.getElementById('phaseMenu')
     if (!menu) return
+    const estendi = document.getElementById('menuExtend')
+    if (estendi){
+        estendi.style.display = meta.durationUnit === 'hours' ? 'none' : 'block'
+    }
     menu.style.display = 'block'
     const larghezza = menu.offsetWidth || 180
     const altezza = menu.offsetHeight || 80
@@ -1856,7 +1935,7 @@ function costruisciGanttOmbra(days){
         delivery: project.delivery,
         penalty: project.penalty,
         phases: project.phases.map(phase => {
-            const u0 = Math.max(0, Math.round(Number(phase.uncertainty) || 0))
+            const u0 = incertezzaGiorni(phase, meta.durationUnit)
             const fine = fineFaseBase(days, usedIndex)
             // Niente burn: l'incertezza resta piena. Quando la fase base e'
             // finita (fine nel passato) o e' stata dichiarata finita, il
@@ -2085,12 +2164,19 @@ function updateChart(days){
                     var eFinale = index === fineFase
                     if (eFinale){
                         titoloCella = (titoloCella ? titoloCella + ' · ' : '') +
-                            'Drag to resize; right-click: options'
+                            (meta.durationUnit === 'hours'
+                                ? 'Right-click: options'
+                                : 'Drag to resize; right-click: options')
                     }
                     var titoloCellaAttr = titoloCella ? ` title="${esc(titoloCella)}"` : ''
-                    var classeFinale = eFinale ? ' cella-fine-fase cella-fine-fase-h' : ''
+                    var classeFinale = eFinale
+                        ? ' cella-fine-fase' +
+                          (meta.durationUnit === 'hours' ? '' : ' cella-fine-fase-h')
+                        : ''
                     var azioneFinale = eFinale
-                        ? ` onpointerdown="iniziaDragFase(event, ${entry.projectIndex}, ${faseInfo.phaseIndex})"` +
+                        ? (meta.durationUnit === 'hours'
+                            ? ''
+                            : ` onpointerdown="iniziaDragFase(event, ${entry.projectIndex}, ${faseInfo.phaseIndex})"`) +
                           ` oncontextmenu="apriMenuFase(event, ${entry.projectIndex}, ${faseInfo.phaseIndex}); return false"`
                         : ''
                     dayString = `${dayString} <td data-slot="${index}" class="cella-fase${classeFinale}" bgcolor="${color}"${titoloCellaAttr}${stileConsegna}${azioneFinale}></td>`
@@ -2306,7 +2392,7 @@ function costruisciCopiaGrafico(perSito){
         if (!c.fase.tratti.length) return
         const inizio = c.fase.tratti[0][0]
         if (!avvii.has(inizio)) avvii.set(inizio, [])
-        avvii.get(inizio).push(`${esc(c.fase.phase.name)} ${c.fase.phase.duration} wd`)
+        avvii.get(inizio).push(`${esc(c.fase.phase.name)} ${durataGiorniEffettiva(c.fase.phase, meta.durationUnit)} wd`)
     })
 
     // Se non c'e' piu' nulla da oggi in avanti (ne' fasi ne' consegne future)
@@ -2504,7 +2590,7 @@ function costruisciCopiaGrafico(perSito){
         text += `${g.project.name} — delivery ${formatDataDaOggetto(parseISODate(g.project.delivery))}\n`
         g.fasi.forEach(f => {
             const risorse = f.phase.resources.map(r => `${r.name} ${r.employed}%`).join(', ')
-            text += `  ${f.phase.name} (${risorse}) — ${f.phase.duration} wd${f.inCorso ? ' [ongoing]' : ''}\n`
+            text += `  ${f.phase.name} (${risorse}) — ${durataGiorniEffettiva(f.phase, meta.durationUnit)} wd${f.inCorso ? ' [ongoing]' : ''}\n`
             if (f.tratti.length === 0){
                 text += '    (no future activity)\n'
             } else {
@@ -2644,7 +2730,7 @@ function costruisciTimeline(days, condensata, ombra){
             if (!tratti.length) return
             const inizio = tratti[0][0]
             if (!avvii.has(inizio)) avvii.set(inizio, [])
-            avvii.get(inizio).push(`${esc(col.fase.phase.name)} ${col.fase.phase.duration} wd`)
+            avvii.get(inizio).push(`${esc(col.fase.phase.name)} ${durataGiorniEffettiva(col.fase.phase, meta.durationUnit)} wd`)
         })
     }
 
@@ -2746,15 +2832,22 @@ function costruisciTimeline(days, condensata, ombra){
             }
             if (eFinale){
                 titoloCella = (titoloCella ? titoloCella + ' · ' : '') +
-                    'Drag to resize; right-click: options'
+                    (meta.durationUnit === 'hours'
+                        ? 'Right-click: options'
+                        : 'Drag to resize; right-click: options')
             }
             const titoloCellaAttr = titoloCella ? ` title="${esc(titoloCella)}"` : ''
             const classi = [soloOmbra ? 'cella-ombra' : '',
-                eFinale ? 'cella-fine-fase cella-fine-fase-v' : '']
+                eFinale
+                    ? 'cella-fine-fase' +
+                      (meta.durationUnit === 'hours' ? '' : ' cella-fine-fase-v')
+                    : '']
                 .filter(Boolean).join(' ')
             const classeAttr = classi ? ` class="${classi}"` : ''
             const azioneFinale = eFinale
-                ? ` onpointerdown="iniziaDragFase(event, ${col.gruppo.entry.projectIndex}, ${f.phaseIndex})"` +
+                ? (meta.durationUnit === 'hours'
+                    ? ''
+                    : ` onpointerdown="iniziaDragFase(event, ${col.gruppo.entry.projectIndex}, ${f.phaseIndex})"`) +
                   ` oncontextmenu="apriMenuFase(event, ${col.gruppo.entry.projectIndex}, ${f.phaseIndex}); return false"`
                 : ''
             const contenuto = (slot === consegna)
@@ -2888,6 +2981,10 @@ function recalculateStartingToday(){
 }
 
 function cutProjectsToday(){
+    if (meta.durationUnit === 'hours'){
+        alert('Cut projects today is available only in days mode.')
+        return
+    }
     if (confirm('Delete all phases before today? You can undo this.')){
         days = new GANTT(data,setResources,meta).getGantt()
     var deltaDay = dateToDayNumber(formatISODate(new Date()), meta.creationDate, meta.workingDays)

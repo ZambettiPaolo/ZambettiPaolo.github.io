@@ -101,8 +101,8 @@
                                 <tr>
                                     <th>Description</th>
                                     <th>Start</th>
-                                    <th>Duration</th>
-                                    <th title="Extra working days, drawn as a gray shadow; they burn down day by day">Uncertainty</th>
+                                    <th id="durationHeader">Duration</th>
+                                    <th id="uncertaintyHeader" title="Extra time for uncertainty, drawn as a ghost">Uncertainty</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -332,13 +332,29 @@
 <div class="container-content fit auto">
     <div class="row justify-content-center bg-light text-black settings-grid">
         <!-- Testi brevi: le spiegazioni estese andranno nella pagina di help. -->
-        <div class="col-md-4 settings-block settings-block-left">
+        <div class="col-md-6 col-lg-3 settings-block settings-block-left">
             <h4>Working days</h4>
             <div class="row justify-content-center" id="workingDaysSettings">
                 <!-- Dynamic Content -->
             </div>
         </div>
-        <div class="col-md-4 settings-block">
+        <div class="col-md-6 col-lg-3 settings-block">
+            <h4 title="Applies to duration and uncertainty">Units</h4>
+            <div class="row justify-content-center" id="durationUnitSettings">
+                <label class="btn btn-light no-wrap mb-0 m-2">
+                    <input type="radio" name="durationUnit" value="days" onchange="setDurationUnit(this.value)">
+                    Days
+                </label>
+                <label class="btn btn-light no-wrap mb-0 m-2">
+                    <input type="radio" name="durationUnit" value="hours" onchange="setDurationUnit(this.value)">
+                    Hours
+                </label>
+            </div>
+            <p class="units-note">
+                Days: you set the duration. Hours: you set the effort; the duration follows from the assigned resources.
+            </p>
+        </div>
+        <div class="col-md-6 col-lg-3 settings-block">
             <h4>Resource view</h4>
             <div class="row justify-content-center">
                 <label class="btn btn-light no-wrap mb-0 m-2">
@@ -347,7 +363,7 @@
                 </label>
             </div>
         </div>
-        <div class="col-md-4 settings-block">
+        <div class="col-md-6 col-lg-3 settings-block">
             <h4>Download format</h4>
             <div class="row justify-content-center" id="exportFormatSettings">
                 <label class="btn btn-light no-wrap mb-0 m-2">
@@ -368,7 +384,7 @@
 </div>
 
     <div id="phaseMenu" class="phase-menu" style="display:none">
-        <button type="button" onclick="menuEstendiFase()">Extend by 1 day</button>
+        <button type="button" id="menuExtend" onclick="menuEstendiFase()">Extend by 1 day</button>
         <button type="button" onclick="menuDichiaraFinita()">Mark as finished</button>
     </div>
     <div id="cookieBanner">

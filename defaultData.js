@@ -37,7 +37,8 @@ var setResources = [
 ]
 var meta = {
   "creationDate": "2026-09-01",
-  "workingDays": [false, true, true, true, true, true, false]
+  "workingDays": [false, true, true, true, true, true, false],
+  "durationUnit": "days"
 }
 var data = [
   {
