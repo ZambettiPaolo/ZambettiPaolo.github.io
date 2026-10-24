@@ -142,12 +142,18 @@ function durataGiorniEffettiva(phase, durationUnit){
     return Math.min(1000, Math.max(1, giorni))
 }
 
-// Incertezza in giorni. È un tempo, non un effort: in modalità ore si usano
-// 8 ore = 1 giorno lavorativo, senza dividere per la capacità delle risorse.
+// Incertezza in giorni. In modalità ore si usa la stessa formula della
+// durata: giorni(base + incertezza) - giorni(base). Così l'incertezza
+// riempie prima l'eventuale ultimo giorno parziale e non aggiunge giorni
+// inutili quando è piccola.
 function incertezzaGiorni(phase, durationUnit){
     const u = Math.max(0, Math.round(Number(phase.uncertainty) || 0))
     if (durationUnit !== 'hours') return u
-    return Math.min(1000, Math.ceil(u / 8))
+    const base = Math.max(1, Math.round(Number(phase.duration) || 1))
+    const capacita = 8 * capacitaGiornaliera(phase)
+    const giorniBase = Math.min(1000, Math.ceil(base / capacita))
+    const giorniTotale = Math.min(1000, Math.ceil((base + u) / capacita))
+    return Math.max(0, giorniTotale - giorniBase)
 }
 
 // Data del giorno lavorativo numero `n`. Inversa esatta di dateToDayNumber.

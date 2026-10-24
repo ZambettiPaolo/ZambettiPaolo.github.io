@@ -646,8 +646,8 @@ function setDurationUnit(value){
         return
     }
     const messaggio = nuova === 'hours'
-        ? 'Convert durations and uncertainties from days to hours?\n\nDurations are converted with ceil(days × 8 × employment); uncertainties with 8 hours = 1 working day. Durations are rounded up: with low resource percentages this can make a phase significantly longer (at 1% capacity, one hour is 12.5 days).\n\nContinue?'
-        : 'Convert durations and uncertainties from hours to days?\n\nDurations are converted with ceil(hours / (8 × employment)); uncertainties with ceil(hours / 8). Both are rounded up; some phases may become longer.\n\nContinue?'
+        ? 'Convert durations and uncertainties from days to hours?\n\nBoth are converted using the assigned resources: hours = ceil(days × 8 × employment). Durations are rounded up: with low resource percentages this can make a phase significantly longer (at 1% capacity, one hour is 12.5 days).\n\nContinue?'
+        : 'Convert durations and uncertainties from hours to days?\n\nDurations are converted with ceil(hours / (8 × employment)). Uncertainty is the difference between the total days and the base days, so it fills the partial last day first. Both are rounded up; some phases may become longer.\n\nContinue?'
     if (!confirm(messaggio)){
         populateSettings()
         return
@@ -658,13 +658,19 @@ function setDurationUnit(value){
             phase.duration = limitaDurata(
                 Math.ceil(Number(phase.duration) * 8 * capacita), 'hours')
             phase.uncertainty = limitaIncertezza(
-                Number(phase.uncertainty) * 8, 'hours')
+                Math.ceil(Number(phase.uncertainty) * 8 * capacita), 'hours')
         }
         else {
-            phase.duration = limitaDurata(
-                Math.ceil(Number(phase.duration) / (8 * capacita)), 'days')
+            // Si parte dalle ore originali prima di modificare la fase.
+            const oreBase = Number(phase.duration) || 1
+            const oreIncertezza = Number(phase.uncertainty) || 0
+            const orePerGiorno = 8 * capacita
+            const giorniBase = Math.min(1000, Math.ceil(oreBase / orePerGiorno))
+            const giorniTotale = Math.min(1000,
+                Math.ceil((oreBase + oreIncertezza) / orePerGiorno))
+            phase.duration = limitaDurata(giorniBase, 'days')
             phase.uncertainty = limitaIncertezza(
-                Math.ceil(Number(phase.uncertainty) / 8), 'days')
+                Math.max(0, giorniTotale - giorniBase), 'days')
         }
     }))
     meta.durationUnit = nuova
@@ -1016,7 +1022,7 @@ function populatePhasesTable() {
                 </div>
             </td>
             <td><input type="number" name="duration" value="${phase.duration}" min="1" max="${meta.durationUnit === 'hours' ? 100000 : 1000}" step="1" title="${meta.durationUnit === 'hours' ? 'Duration in hours' : 'Duration in days'}" onchange="updatePhaseField( ${index}, 'duration', this.value)"></td>
-            <td><input type="number" name="uncertainty" value="${phase.uncertainty || 0}" min="0" max="${meta.durationUnit === 'hours' ? 8000 : 1000}" step="1" title="${meta.durationUnit === 'hours' ? 'Uncertainty in hours' : 'Uncertainty in days'}" onchange="updatePhaseField( ${index}, 'uncertainty', this.value)"></td>`
+            <td><input type="number" name="uncertainty" value="${phase.uncertainty || 0}" min="0" max="${meta.durationUnit === 'hours' ? 100000 : 1000}" step="1" title="${meta.durationUnit === 'hours' ? 'Uncertainty in hours' : 'Uncertainty in days'}" onchange="updatePhaseField( ${index}, 'uncertainty', this.value)"></td>`
         if (selectedPhaseIndex === index) {
             phaseRow.classList.add('selected2')
         }
@@ -1402,11 +1408,11 @@ function limitaDurata(value, unit){
     return v
 }
 
-// L'incertezza può essere 0 (nessun rischio). In ore il tetto è 8000
-// (1000 giorni × 8 ore), in giorni 1000.
+// L'incertezza può essere 0 (nessun rischio). In ore il tetto è 100000,
+// come per la durata; in giorni 1000.
 function limitaIncertezza(value, unit){
     let v = Math.round(Number(value) || 0)
-    const massimo = unit === 'hours' ? 8000 : 1000
+    const massimo = unit === 'hours' ? 100000 : 1000
     if (v < 0) v = 0
     if (v > massimo) v = massimo
     return v
