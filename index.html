@@ -102,7 +102,7 @@
                                     <th>Description</th>
                                     <th>Start</th>
                                     <th id="durationHeader">Duration</th>
-                                    <th id="uncertaintyHeader" title="Extra time for uncertainty, drawn as a ghost">Uncertainty</th>
+                                    <th id="uncertaintyHeader" title="Extra time for uncertainty: days(duration + uncertainty) − days(duration), drawn as a ghost">Uncertainty</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -339,7 +339,7 @@
             </div>
         </div>
         <div class="col-md-6 col-lg-3 settings-block">
-            <h4 title="Applies to duration and uncertainty">Units</h4>
+            <h4 title="Applies to duration and uncertainty. Hours measure effort: 8 hours = one full-time working day; days are working days.">Units</h4>
             <div class="row justify-content-center" id="durationUnitSettings">
                 <label class="btn btn-light no-wrap mb-0 m-2">
                     <input type="radio" name="durationUnit" value="days" onchange="setDurationUnit(this.value)">

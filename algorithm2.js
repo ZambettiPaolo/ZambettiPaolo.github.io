@@ -136,7 +136,8 @@ function durataGiorniEffettiva(phase, durationUnit){
 }
 
 // Incertezza in giorni. In modalità ore si usa la stessa formula della
-// durata: giorni(base + incertezza) - giorni(base). Così l'incertezza
+// durata: giorni(ore base + ore incertezza) - giorni(ore base), dove
+// giorni(h) = ceil(h / (8 * capacità giornaliera)). Così l'incertezza
 // riempie prima l'eventuale ultimo giorno parziale e non aggiunge giorni
 // inutili quando è piccola.
 function incertezzaGiorni(phase, durationUnit){
