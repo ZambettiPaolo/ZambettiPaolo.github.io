@@ -1972,6 +1972,18 @@ function estendiGiorniPerOmbra(days, ombra){
     }
 }
 
+// Indici delle fasi che hanno una coda di incertezza nell'ombra. Per queste
+// fasi va disegnato tutto il fantasma (base + coda); le fasi con incertezza
+// zero non mostrano nulla, anche se la seconda schedulazione le sposta.
+function indiciConCodaOmbra(ombra){
+    const indici = new Set()
+    if (!ombra) return indici
+    ombra.forEach(day => day.used.forEach((valore, indice) => {
+        if (valore === 2) indici.add(indice)
+    }))
+    return indici
+}
+
 /* Colonne del grafico orizzontale.
    Normale: una colonna per ogni giorno lavorativo.
    Condensata: solo le date in cui qualcosa cambia (inizio e fine di un tratto,
@@ -1979,7 +1991,7 @@ function estendiGiorniPerOmbra(days, ombra){
    slot 0 fa sempre da prima colonna, cosi' il grafico ha un punto di partenza.
    Restituisce gli indici di slot crescenti e quelli dei periodi di ferie da
    disegnare come colonne vuote. */
-function colonneOrizzontali(days, righe, ombra){
+function colonneOrizzontali(days, righe, ombra, codaOmbra){
     if (chartDensity !== 'condensed'){
         return { slots: days.map((day, i) => i), ferieInizio: new Set() }
     }
@@ -1994,8 +2006,9 @@ function colonneOrizzontali(days, righe, ombra){
             })
             // Anche la coda d'incertezza ha bisogno delle sue colonne: nella
             // condensata le date-evento sono solo quelle che cambiano.
-            if (ombra){
-                trattiAttivi(ombra, faseInfo.usedIndex, 2).forEach(([a, b]) => {
+            if (ombra && codaOmbra.has(faseInfo.usedIndex)){
+                // Tutto il fantasma (base spostata + coda), non solo la coda.
+                trattiAttivi(ombra, faseInfo.usedIndex, true).forEach(([a, b]) => {
                     confini.add(a)
                     confini.add(b - 1)
                 })
@@ -2042,9 +2055,10 @@ function updateChart(days){
     // L'ombra si calcola sulla base: le colonne possono allungarsi fin dove
     // arriva la proiezione con incertezza.
     var ombra = costruisciGanttOmbra(days)
+    var codaOmbra = indiciConCodaOmbra(ombra)
     estendiGiorniPerOmbra(days, ombra)
     var righe = costruisciRigheVisibili()
-    var colonne = colonneOrizzontali(days, righe, ombra)
+    var colonne = colonneOrizzontali(days, righe, ombra, codaOmbra)
     var slots = colonne.slots
     var ferieInizio = colonne.ferieInizio
     var slotSet = new Set(slots)
@@ -2139,7 +2153,8 @@ function updateChart(days){
             slots.forEach(index => {
                 var day = days[index]
                 var ombraGiorno = ombra ? ombra[index] : null
-                var inOmbra = !!(ombraGiorno && ombraGiorno.used[faseInfo.usedIndex] === 2)
+                var inOmbra = !!(codaOmbra.has(faseInfo.usedIndex) &&
+                    ombraGiorno && ombraGiorno.used[faseInfo.usedIndex] !== 0)
                 // Barra di consegna: una striscia rossa sul lato sinistro
                 // della cella, senza cambiare la larghezza della colonna.
                 var stileConsegna = consegna === index
@@ -2620,8 +2635,9 @@ function renderTimeline(days){
         return
     }
     const ombra = costruisciGanttOmbra(days)
+    const codaOmbra = indiciConCodaOmbra(ombra)
     estendiGiorniPerOmbra(days, ombra)
-    const risultato = costruisciTimeline(days, chartDensity === 'condensed', ombra)
+    const risultato = costruisciTimeline(days, chartDensity === 'condensed', ombra, codaOmbra)
     intestazione.innerHTML = risultato.header
     contenitore.innerHTML = risultato.body
     sincronizzaTimelineHeader()
@@ -2638,7 +2654,7 @@ function sincronizzaTimelineHeader(){
 /* Unico costruttore della timeline del sito. La versione condensata non e'
    piu' la tabella dell'email: parte da questa e cambia solo quali date
    diventano righe (tutti i giorni lavorativi oppure solo le date-evento). */
-function costruisciTimeline(days, condensata, ombra){
+function costruisciTimeline(days, condensata, ombra, codaOmbra){
     const workingDays = normalizzaGiorniLavorativi(meta.workingDays)
     const coloriFasi = (function () {
         const tutte = []
@@ -2688,8 +2704,9 @@ function costruisciTimeline(days, condensata, ombra){
                 confini.add(a)
                 confini.add(b - 1)
             })
-            if (ombra){
-                trattiAttivi(ombra, col.fase.usedIndex, 2).forEach(([a, b]) => {
+            if (ombra && codaOmbra.has(col.fase.usedIndex)){
+                // Tutto il fantasma (base spostata + coda), non solo la coda.
+                trattiAttivi(ombra, col.fase.usedIndex, true).forEach(([a, b]) => {
                     confini.add(a)
                     confini.add(b - 1)
                 })
@@ -2797,7 +2814,8 @@ function costruisciTimeline(days, condensata, ombra){
             // ferie di un'altra risorsa non deve nascondere questa fase.
             const attivo = !!(giorno && giorno.used[f.usedIndex] === 1)
             const ombraGiorno = ombra ? ombra[slot] : null
-            const inOmbra = !!(ombraGiorno && ombraGiorno.used[f.usedIndex] === 2)
+            const inOmbra = !!(codaOmbra.has(f.usedIndex) &&
+                ombraGiorno && ombraGiorno.used[f.usedIndex] !== 0)
             const soloOmbra = inOmbra && !attivo
             const passato = slot < oggiSlot
             let sfondo = festivo ? '#f7f7f7' : (passato ? COLORE_GIORNI_PASSATI : '#ffffff')
