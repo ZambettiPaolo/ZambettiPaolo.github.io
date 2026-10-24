@@ -23,13 +23,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 const PARALLEL = 0
 const SEQUENCE = 1
 
-/* Quota delle risorse usata dalla coda di incertezza, rispetto all'impiego
-   della fase base. Con una base al 100% la coda vale 50: sommata a un'altra
-   fase al 50% resta dentro il tetto del 100% del motore, mentre accostata al
-   grafico base rappresenta la sovrapposizione 100% + 50% = 150%. Il tetto
-   dell'algoritmo non cambia. */
-const UNCERTAINTY_RESOURCE_SHARE = 0.5
-
 /* ---------------------------------------------------------------------------
    Helper puri di calendario.
 
@@ -142,12 +135,19 @@ function durataGiorniEffettiva(phase, durationUnit){
     return Math.min(1000, Math.max(1, giorni))
 }
 
-// Incertezza in giorni. È un tempo, non un effort: in modalità ore si usano
-// 8 ore = 1 giorno lavorativo, senza dividere per la capacità delle risorse.
+// Incertezza in giorni. In modalità ore si usa la stessa formula della
+// durata: giorni(ore base + ore incertezza) - giorni(ore base), dove
+// giorni(h) = ceil(h / (8 * capacità giornaliera)). Così l'incertezza
+// riempie prima l'eventuale ultimo giorno parziale e non aggiunge giorni
+// inutili quando è piccola.
 function incertezzaGiorni(phase, durationUnit){
     const u = Math.max(0, Math.round(Number(phase.uncertainty) || 0))
     if (durationUnit !== 'hours') return u
-    return Math.min(1000, Math.ceil(u / 8))
+    const base = Math.max(1, Math.round(Number(phase.duration) || 1))
+    const capacita = 8 * capacitaGiornaliera(phase)
+    const giorniBase = Math.min(1000, Math.ceil(base / capacita))
+    const giorniTotale = Math.min(1000, Math.ceil((base + u) / capacita))
+    return Math.max(0, giorniTotale - giorniBase)
 }
 
 // Data del giorno lavorativo numero `n`. Inversa esatta di dateToDayNumber.
@@ -179,7 +179,6 @@ class GANTT{
         this.creationDate = meta.creationDate
         this.workingDays = giorniLavorativiDaMeta(meta)
         this.durationUnit = meta.durationUnit === 'hours' ? 'hours' : 'days'
-        this.uncertaintyShare = UNCERTAINTY_RESOURCE_SHARE
         this.phaseIndex = 1
         this.numberOfPhases = 0
         this.setNumberOfPhases()
@@ -372,9 +371,10 @@ class GANTT{
                 currentDay++
             }
             // Coda di incertezza: e' una fase in piu' attaccata alla base, con
-            // una quota ridotta delle stesse risorse. Il numero di giorni e'
-            // gia' stato decurtato dal tempo trascorso (uncertaintyRemaining),
-            // quindi qui il motore non ha bisogno di sapere che giorno e' oggi.
+            // lo stesso impiego di risorse della fase base. Il numero di giorni
+            // e' gia' stato decurtato dal tempo trascorso
+            // (uncertaintyRemaining), quindi qui il motore non ha bisogno di
+            // sapere che giorno e' oggi.
             // used = 2 distingue la coda dalla base (used = 1) nel disegno.
             var giorniIncertezza = Math.max(0, Math.round(Number(phase.uncertaintyRemaining) || 0))
             for (let i = 0; i < giorniIncertezza; i++){
@@ -384,20 +384,19 @@ class GANTT{
                         var newDayIncertezza = this.getNewDay()
                         newDayIncertezza.used[this.phaseIndex] = 2
                         phase.resources.forEach(res => {
-                            newDayIncertezza.resource.set(
-                                res.name, res.employed * this.uncertaintyShare)
+                            newDayIncertezza.resource.set(res.name, res.employed)
                         })
                         this.solution[currentDay] = newDayIncertezza
                     }
                     else{
                         isFree = phase.resources.every(res =>
-                            (res.employed * this.uncertaintyShare +
+                            (res.employed +
                              this.solution[currentDay].resource.get(res.name)) <= 100)
                         if (isFree){
                             phase.resources.forEach(res => {
                                 var impiego = this.solution[currentDay].resource.get(res.name)
                                 this.solution[currentDay].resource.set(
-                                    res.name, impiego + res.employed * this.uncertaintyShare)
+                                    res.name, impiego + res.employed)
                             })
                             this.solution[currentDay].used[this.phaseIndex] = 2
                         }
