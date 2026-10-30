@@ -139,6 +139,18 @@ class NormalizeTests(unittest.TestCase):
         self.assertTrue(result["ok"])
         self.assertTrue(result["warnings"])
 
+    def test_llm_metadata_is_ignored(self):
+        raw = esempio()
+        raw["meta"]["llm"] = {
+            "prompt": "https://example.invalid/easygantt_prompt.md",
+            "engine": ["https://example.invalid/easygantt.py"],
+        }
+        state = eg.normalize_state(raw)
+        self.assertNotIn("llm", state["meta"])
+        # Il resto dello stato resta valido e simulabile.
+        document = eg.simulate(raw)
+        self.assertIn("results", document)
+
 
 class HtmlTests(unittest.TestCase):
     def test_json_escapes_script(self):

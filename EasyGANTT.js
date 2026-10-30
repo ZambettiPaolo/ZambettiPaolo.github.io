@@ -39,6 +39,9 @@ if (STATO_INCORPORATO) {
 }
 
 const VERSION = {"major":0, "minor":5, "patch":1}
+// Documenti per il ciclo con la chat. Dopo il merge del branch passare a
+// "main"; il link finisce nei metadati del JSON copiato/esportato.
+const LLM_DOCS_BASE = 'https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/'
 var projectDelay = []
 var selectedProjectIndex = 0
 var selectedPhaseIndex = 0
@@ -830,11 +833,28 @@ function applicaStatoImportato(normalizzato){
     scheduleAutosave()
 }
 
+/* Puntatori per un LLM che riceve il JSON. Non fanno parte dello stato:
+   normalizeState li ignora e l'app non li salva. Servono a far trovare
+   prompt e motore senza doverli passare a parte. */
+function metadatiLLM(){
+    return {
+        prompt: LLM_DOCS_BASE + 'easygantt_prompt.md',
+        engine: [
+            LLM_DOCS_BASE + 'easygantt.py',
+            LLM_DOCS_BASE + 'easygantt_engine.py'
+        ],
+        schema: LLM_DOCS_BASE + 'easygantt_schema.json',
+        resultsSchema: LLM_DOCS_BASE + 'easygantt_results_schema.json',
+        command: 'python easygantt.py simulate input.json -o output.json',
+        note: 'Results are computed by the engine, not by the page.'
+    }
+}
+
 /* JSON corrente per il ciclo con la chat. E' solo l'input: i risultati li
    calcola il motore (l'app con algorithm2.js, la chat con easygantt.py). */
 function datiCorrentiJSON(){
     return JSON.stringify({
-        meta: meta,
+        meta: Object.assign({}, meta, {llm: metadatiLLM()}),
         data: data,
         setResources: setResources
     }, null, 2)
@@ -964,7 +984,7 @@ function downloadData(){
 function downloadJSON() {
     // meta.version NON viene scritta sull'oggetto vivo: era una mutazione non
     // annullabile dello stato (e finiva dentro la cronologia di undo).
-    var out = {"meta": Object.assign({}, meta, {version: VERSION}),
+    var out = {"meta": Object.assign({}, meta, {version: VERSION, llm: metadatiLLM()}),
                "data":data, "setResources": setResources }
     const json = JSON.stringify(out, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
@@ -981,7 +1001,7 @@ function downloadJSON() {
 // generaHTMLExport() per poterla provare senza rete.
 function componiHTMLExport(html){
     const dati = JSON.stringify({
-        meta: Object.assign({}, meta, {version: VERSION}),
+        meta: Object.assign({}, meta, {version: VERSION, llm: metadatiLLM()}),
         data: data,
         setResources: setResources
     })

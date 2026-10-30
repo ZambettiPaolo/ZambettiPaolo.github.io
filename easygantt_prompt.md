@@ -6,6 +6,29 @@ You produce the **data** for the app. You never control the app and you never
 write HTML: the user validates your JSON with `easygantt.py`, which builds the
 single-file HTML export, or imports the JSON directly into EasyGANTT.
 
+## Getting the engine (if you can run code)
+
+The JSON you receive may contain a `meta.llm` block with the same links.
+Download the two Python files from the official repository into the same
+directory:
+
+- https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/easygantt.py
+- https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/easygantt_engine.py
+
+Then run:
+
+```bash
+python easygantt.py simulate input.json -o output.json
+```
+
+`output.json` contains the input plus the `results` block (dates, delays,
+cost, resource usage). If you cannot download the files, ask the user to
+attach `easygantt.py` and `easygantt_engine.py`; do not try to reimplement
+the engine. The Python uses only the standard library (Python 3.10+).
+
+After the branch is merged, replace `feature/easygantt-py` with `main` or a
+tag in these links.
+
 ## Non-negotiable output contract
 
 1. Output exactly one fenced ```json block and nothing else.

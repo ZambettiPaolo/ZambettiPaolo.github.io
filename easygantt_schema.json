@@ -37,6 +37,22 @@
         "workWeekend": {
           "type": "boolean",
           "description": "Campo legacy: true significava tutti i giorni lavorativi. Preferire workingDays."
+        },
+        "llm": {
+          "type": "object",
+          "description": "Puntatori per un LLM che riceve il JSON: prompt, sorgenti del motore Python, schemi e comando. L'app e la libreria li ignorano.",
+          "properties": {
+            "prompt": { "type": "string" },
+            "engine": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "schema": { "type": "string" },
+            "resultsSchema": { "type": "string" },
+            "command": { "type": "string" },
+            "note": { "type": "string" }
+          },
+          "additionalProperties": true
         }
       }
     },

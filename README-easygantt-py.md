@@ -63,6 +63,11 @@ L'app ignora `results` quando apre il file: è un blocco per l'LLM e per chi
 legge il JSON. Se l'input cambia, il blocco diventa obsoleto e va ricalcolato
 (`inputHash` serve a accorgersene).
 
+L'app aggiunge al JSON copiato/esportato un blocco `meta.llm` con i link a
+questo prompt, ai sorgenti Python, agli schemi e al comando `simulate`.
+`normalize_state` lo ignora, quindi non entra nello stato né nei risultati:
+serve solo a far trovare all'LLM le istruzioni senza passarle a parte.
+
 `build` usa come template l'`index.html` accanto a `easygantt.py`. Il file
 generato carica CSS e script da `https://easygantt.net/`; per un uso offline
 passa `--base` con la cartella locale che contiene l'app:
