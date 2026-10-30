@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easygantt.net/easygantt_results_schema.json",
+  "title": "EasyGANTT simulation results",
+  "description": "Blocco `results` calcolato dal motore: piano base, date, ritardi, costo e uso delle risorse. E' un dato derivato: se l'input cambia, va ricalcolato.",
+  "type": "object",
+  "required": [
+    "schema",
+    "engine",
+    "generatedAt",
+    "inputHash",
+    "durationUnit",
+    "calendar",
+    "daysTotal",
+    "projects",
+    "totals",
+    "resources"
+  ],
+  "properties": {
+    "schema": {
+      "const": "easygantt.results/1"
+    },
+    "engine": {
+      "type": "string",
+      "description": "Es. easygantt-py/1.0 oppure easygantt-app/0.5.1."
+    },
+    "generatedAt": {
+      "type": "string",
+      "description": "Timestamp ISO-8601 UTC del calcolo."
+    },
+    "inputHash": {
+      "type": "string",
+      "description": "SHA-256 del JSON canonico di meta+data+setResources. Se non corrisponde all'input corrente, i risultati sono obsoleti."
+    },
+    "durationUnit": {
+      "type": "string",
+      "enum": ["days", "hours"]
+    },
+    "calendar": {
+      "type": "object",
+      "required": ["creationDate", "workingDays"],
+      "properties": {
+        "creationDate": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "workingDays": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": { "type": "boolean" }
+        }
+      }
+    },
+    "daysTotal": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Numero di slot (giorni lavorativi) del piano."
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "delivery",
+          "deliverySlot",
+          "start",
+          "finishSlot",
+          "finish",
+          "workingDays",
+          "delayWorkingDays",
+          "penaltyPerDay",
+          "cost",
+          "onTime",
+          "phases"
+        ],
+        "properties": {
+          "name": { "type": "string" },
+          "delivery": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "deliverySlot": { "type": "integer" },
+          "start": { "type": ["string", "null"], "description": "Data ISO del primo slot occupato." },
+          "finishSlot": { "type": "integer", "minimum": -1 },
+          "finish": { "type": ["string", "null"], "description": "Data ISO dell'ultimo slot occupato." },
+          "workingDays": { "type": "integer", "minimum": 0 },
+          "delayWorkingDays": {
+            "type": "integer",
+            "description": "Slot di ritardo; negativo = in anticipo."
+          },
+          "penaltyPerDay": { "type": "number" },
+          "cost": { "type": "number", "minimum": 0 },
+          "onTime": { "type": "boolean" },
+          "phases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "startSlot",
+                "endSlot",
+                "start",
+                "finish",
+                "workingDays",
+                "uncertaintyWorkingDays",
+                "resources"
+              ],
+              "properties": {
+                "name": { "type": "string" },
+                "startSlot": { "type": ["integer", "null"] },
+                "endSlot": { "type": ["integer", "null"] },
+                "start": { "type": ["string", "null"] },
+                "finish": { "type": ["string", "null"] },
+                "workingDays": { "type": "integer", "minimum": 0 },
+                "uncertaintyWorkingDays": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Incertezza pianificata in giorni; non e' la coda simulata."
+                },
+                "resources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "employed", "resourceDays"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "employed": { "type": "integer", "minimum": 1, "maximum": 100 },
+                      "resourceDays": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Somma di employed/100 sui giorni della fase."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "required": ["delayWorkingDays", "cost", "projectsLate", "projectsOnTime"],
+      "properties": {
+        "delayWorkingDays": { "type": "integer", "minimum": 0 },
+        "cost": { "type": "number", "minimum": 0 },
+        "projectsLate": { "type": "integer", "minimum": 0 },
+        "projectsOnTime": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "busyDays", "peakEmployed", "utilization"],
+        "properties": {
+          "name": { "type": "string" },
+          "busyDays": { "type": "integer", "minimum": 0 },
+          "peakEmployed": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "utilization": { "type": "number", "minimum": 0, "maximum": 1 },
+          "holidays": { "type": "array" }
+        }
+      }
+    },
+    "uncertainty": {
+      "type": "object",
+      "description": "Stato della proiezione con incertezza. Nel piano base included=false."
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

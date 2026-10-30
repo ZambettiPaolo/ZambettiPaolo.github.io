@@ -9,6 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import easygantt as eg
+import easygantt_engine as engine
 
 MINIMAL_TEMPLATE = (
     '<!doctype html><html><head><meta charset="UTF-8">'
@@ -180,6 +181,151 @@ class HtmlTests(unittest.TestCase):
     def test_extract_rejects_html_without_block(self):
         with self.assertRaises(eg.EasyGanttError):
             eg.extract_html("<html><body>no data</body></html>")
+
+
+class EngineTests(unittest.TestCase):
+    """Valori di riferimento prodotti dal motore JS (algorithm2.js)."""
+
+    def test_calendar_slots(self):
+        working_days = eg.DEFAULT_WORKING_DAYS
+        self.assertEqual(
+            engine.date_to_day_number("2026-09-01", "2026-09-01", working_days), 0
+        )
+        self.assertEqual(
+            engine.date_to_day_number("2026-09-23", "2026-09-01", working_days), 16
+        )
+        self.assertEqual(
+            engine.date_to_day_number("2026-10-21", "2026-09-01", working_days), 36
+        )
+        self.assertEqual(
+            engine.day_number_to_date(36, "2026-09-01", working_days).isoformat(),
+            "2026-10-21",
+        )
+
+    def test_example_schedule_matches_js(self):
+        raw = json.loads(
+            (ROOT / "examples" / "easygantt-coffee.json").read_text(encoding="utf-8")
+        )
+        results = eg.simulate(raw)["results"]
+        self.assertEqual(results["daysTotal"], 74)
+
+        projects = {project["name"]: project for project in results["projects"]}
+        coffee = projects["COFFEE MACHINE"]
+        self.assertEqual(coffee["finish"], "2026-10-21")
+        self.assertEqual(coffee["delayWorkingDays"], -37)
+        self.assertEqual(coffee["cost"], 0)
+        self.assertTrue(coffee["onTime"])
+
+        design = coffee["phases"][0]
+        self.assertEqual(
+            (design["start"], design["finish"], design["workingDays"]),
+            ("2026-09-01", "2026-09-23", 12),
+        )
+        self.assertAlmostEqual(design["resources"][0]["resourceDays"], 12.0)
+
+        build = coffee["phases"][1]
+        self.assertEqual(
+            (build["start"], build["finish"], build["workingDays"]),
+            ("2026-09-24", "2026-10-21", 20),
+        )
+        self.assertAlmostEqual(
+            build["resources"][0]["resourceDays"], 16.0, places=3
+        )
+
+        bottle = projects["BOTTLE OPENER"]
+        self.assertEqual(bottle["finish"], "2026-11-04")
+        self.assertEqual(bottle["delayWorkingDays"], -12)
+
+        concept = bottle["phases"][0]
+        self.assertEqual(
+            (concept["start"], concept["finish"], concept["workingDays"]),
+            ("2026-09-24", "2026-09-30", 5),
+        )
+        self.assertAlmostEqual(
+            concept["resources"][0]["resourceDays"], 2.5
+        )
+
+        production = bottle["phases"][1]
+        self.assertEqual(
+            (production["start"], production["finish"], production["workingDays"]),
+            ("2026-10-22", "2026-11-04", 10),
+        )
+        self.assertAlmostEqual(
+            production["resources"][0]["resourceDays"], 10.0
+        )
+
+        self.assertEqual(
+            results["totals"],
+            {
+                "delayWorkingDays": 0,
+                "cost": 0,
+                "projectsLate": 0,
+                "projectsOnTime": 2,
+            },
+        )
+        resources = {item["name"]: item for item in results["resources"]}
+        self.assertEqual(resources["DESIGNER"]["busyDays"], 22)
+        self.assertEqual(resources["DESIGNER"]["peakEmployed"], 100)
+        self.assertEqual(resources["BUILDER"]["busyDays"], 30)
+        self.assertEqual(resources["BUILDER"]["peakEmployed"], 100)
+
+    def test_late_project_cost(self):
+        raw = {
+            "meta": {
+                "creationDate": "2026-09-01",
+                "workingDays": [False, True, True, True, True, True, False],
+                "durationUnit": "days",
+            },
+            "setResources": [{"name": "R", "holidays": []}],
+            "data": [
+                {
+                    "name": "P",
+                    "delivery": "2026-09-01",
+                    "penalty": 3,
+                    "phases": [
+                        {
+                            "name": "A",
+                            "duration": 10,
+                            "uncertainty": 0,
+                            "start": 0,
+                            "resources": [{"name": "R", "employed": 100}],
+                        }
+                    ],
+                }
+            ],
+        }
+        results = eg.simulate(raw)["results"]
+        project = results["projects"][0]
+        self.assertEqual(project["finish"], "2026-09-14")
+        self.assertEqual(project["delayWorkingDays"], 9)
+        self.assertEqual(project["cost"], 27)
+        self.assertFalse(project["onTime"])
+        self.assertEqual(results["totals"]["cost"], 27)
+        self.assertEqual(results["totals"]["projectsLate"], 1)
+
+    def test_input_hash_changes_when_input_changes(self):
+        raw = json.loads(
+            (ROOT / "examples" / "easygantt-coffee.json").read_text(encoding="utf-8")
+        )
+        first = eg.simulate(raw)["results"]["inputHash"]
+        raw["data"][0]["penalty"] = 5
+        second = eg.simulate(raw)["results"]["inputHash"]
+        self.assertNotEqual(first, second)
+
+    def test_build_html_keeps_results(self):
+        raw = json.loads(
+            (ROOT / "examples" / "easygantt-coffee.json").read_text(encoding="utf-8")
+        )
+        document = eg.simulate(raw)
+        with tempfile.TemporaryDirectory() as tmp:
+            template = Path(tmp) / "index.html"
+            template.write_text(MINIMAL_TEMPLATE, encoding="utf-8")
+            html = eg.build_html(document, template=template)
+            recovered = eg.extract_html(html, include_results=True)
+            self.assertIn("results", recovered)
+            self.assertEqual(recovered["results"]["daysTotal"], 74)
+            # Senza include_results il blocco derivato viene scartato.
+            self.assertNotIn("results", eg.extract_html(html))
 
 
 class ExampleTests(unittest.TestCase):

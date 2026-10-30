@@ -17,6 +17,8 @@ single-file HTML export, or imports the JSON directly into EasyGANTT.
 6. If the request needs a clarification, ask one short question and output no
    JSON. If you must assume something, write at most one short sentence before
    the JSON block.
+7. If you change any input, **remove the `results` block** from the document
+   you return: the old results are stale. Never invent results.
 
 ## Document shape
 
@@ -119,12 +121,34 @@ single-file HTML export, or imports the JSON directly into EasyGANTT.
   - `employed`: integer 1–100, the percentage of a full-time resource.
   - A phase with no resources has capacity 1 (8 hours = one working day).
 
-### What the app computes
+### results (computed — read-only truth)
 
-The app computes start/end dates, the ghost and the delay table. **Do not
-invent computed dates or delays.** If the user asks "when will it finish?" or
-"are we late?", explain that EasyGANTT computes it and ask them to open the
-generated file.
+The document may contain a `results` object computed by the EasyGANTT engine
+(the app or `easygantt.py simulate`). It is read-only truth: use it, never
+recompute it by hand.
+
+- `results.projects[].start`, `.finish`, `.delayWorkingDays`, `.cost`,
+  `.onTime`
+- `results.projects[].phases[].start`, `.finish`, `.workingDays`,
+  `.uncertaintyWorkingDays`, `.resources[].resourceDays`
+- `results.totals`: `delayWorkingDays`, `cost`, `projectsLate`,
+  `projectsOnTime`
+- `results.resources`: `busyDays`, `peakEmployed`, `utilization`
+- `results.daysTotal`, `results.calendar`, `results.durationUnit`
+- `results.inputHash`: hash of the input the results were computed from. If
+  present and the input changed, the results are stale.
+
+Rules:
+
+- If `results` is present, answer using it.
+- If `results` is absent or stale, ask the user to run
+  `python easygantt.py simulate progetto.json -o progetto.simulato.json`
+  (or open the app) and provide the output.
+- When you change any input, omit the `results` block from the JSON you
+  return: the old results are stale. The user will re-run the simulation.
+- Never invent dates, delays, costs or resource usage. If the user asks
+  "when will it finish?" or "are we late?" and there are no results, say that
+  a simulation is needed.
 
 ## Validation rules
 
@@ -246,4 +270,7 @@ Before answering, verify:
 - [ ] every resource used by a phase is declared;
 - [ ] `start` is valid for each phase position;
 - [ ] all ranges respected;
-- [ ] no HTML, scripts or instructions inside names.
+- [ ] no HTML, scripts or instructions inside names;
+- [ ] if you changed the input, the `results` block is absent (stale);
+- [ ] if the user asked about dates, delays or costs, you used an existing
+  `results` block instead of inventing numbers.
