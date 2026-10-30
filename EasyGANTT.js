@@ -801,26 +801,126 @@ function handleFileUpload(event) {
             event.target.value = ''
             return
         }
-        data = normalizzato.data
-        meta = normalizzato.meta
-        setResources = normalizzato.setResources
-        rigenSetResource()
-        progettiNascosti.clear()
-        undoRedoManager = new UndoRedoManager(snapshot())
-        autosaveArmed = true
-        selectedProjectIndex = 0
-        selectedPhaseIndex = 0
-        selectedResourceIndex = 0
-        selectedHolidayIndex = 0
-        currentResourceIndex = 0
-        populateSettings()
-        populateResourceSelector()
-        populateProjectsTable()
-        updateChart(new GANTT(data, setResources, meta).getGantt())
-        scheduleAutosave()
+        applicaStatoImportato(normalizzato)
         event.target.value = ''
     }
     reader.readAsText(file)
+}
+
+/* Applica uno stato gia' validato (file o appunti). Unico punto in cui un
+   documento esterno sostituisce i globali: usato da handleFileUpload e da
+   applyPastedData(), cosi' le due strade non possono divergere. */
+function applicaStatoImportato(normalizzato){
+    data = normalizzato.data
+    meta = normalizzato.meta
+    setResources = normalizzato.setResources
+    rigenSetResource()
+    progettiNascosti.clear()
+    undoRedoManager = new UndoRedoManager(snapshot())
+    autosaveArmed = true
+    selectedProjectIndex = 0
+    selectedPhaseIndex = 0
+    selectedResourceIndex = 0
+    selectedHolidayIndex = 0
+    currentResourceIndex = 0
+    populateSettings()
+    populateResourceSelector()
+    populateProjectsTable()
+    updateChart(new GANTT(data, setResources, meta).getGantt())
+    scheduleAutosave()
+}
+
+/* JSON corrente per il ciclo con la chat. E' solo l'input: i risultati li
+   calcola il motore (l'app con algorithm2.js, la chat con easygantt.py). */
+function datiCorrentiJSON(){
+    return JSON.stringify({
+        meta: meta,
+        data: data,
+        setResources: setResources
+    }, null, 2)
+}
+
+// Fallback per i browser senza Clipboard API: textarea nascosta + execCommand.
+function copiaTestoConSelezione(testo){
+    const area = document.createElement('textarea')
+    area.value = testo
+    area.style.cssText = 'position:fixed;left:-10000px;top:0'
+    document.body.appendChild(area)
+    area.focus()
+    area.select()
+    area.setSelectionRange(0, area.value.length)
+    let ok = false
+    try { ok = document.execCommand('copy') } catch (e) { ok = false }
+    area.remove()
+    return ok
+}
+
+function copyData(){
+    const testo = datiCorrentiJSON()
+    const stato = document.getElementById('copyDataStatus')
+    function esito(ok){
+        if (!stato) return
+        stato.textContent = ok ? 'Copied' : 'Copy failed'
+        if (ok) setTimeout(function(){ if (stato) stato.textContent = '' }, 2500)
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(testo).then(function(){
+            esito(true)
+        }).catch(function(e){
+            console.warn('Clipboard API non disponibile, provo execCommand.', e)
+            esito(copiaTestoConSelezione(testo))
+        })
+    }
+    else {
+        esito(copiaTestoConSelezione(testo))
+    }
+}
+
+function openPasteData(){
+    const modal = document.getElementById('pasteDataModal')
+    const area = document.getElementById('pasteDataText')
+    const stato = document.getElementById('pasteDataStatus')
+    if (!modal || !area) return
+    chiudiMenuFase()
+    if (stato) stato.textContent = ''
+    modal.classList.add('open')
+    document.body.style.overflow = 'hidden'
+    if (navigator.clipboard && navigator.clipboard.readText){
+        // Comodo se l'utente ha appena copiato il JSON dalla chat. Se il
+        // permesso manca o il browser lo nega, resta la textarea.
+        navigator.clipboard.readText().then(function(testo){
+            if (testo && !area.value) area.value = testo
+        }).catch(function(){})
+    }
+    area.focus()
+}
+
+function closePasteData(){
+    const modal = document.getElementById('pasteDataModal')
+    if (modal) modal.classList.remove('open')
+    document.body.style.overflow = ''
+}
+
+function applyPastedData(){
+    const area = document.getElementById('pasteDataText')
+    const stato = document.getElementById('pasteDataStatus')
+    const testo = area ? area.value.trim() : ''
+    if (!testo){
+        if (stato) stato.textContent = 'Paste the JSON or the exported HTML first.'
+        return
+    }
+    const sembraHtml = /<html[\s>]/i.test(testo) || /<script[\s>]/i.test(testo)
+    const sembraJson = testo.charAt(0) === '{' || testo.charAt(0) === '['
+    const normalizzato = provaFormati(testo, sembraHtml, sembraJson)
+    if (!normalizzato){
+        if (stato) stato.textContent = 'This is not valid EasyGANTT data. Nothing has been changed.'
+        return
+    }
+    if (autosaveArmed && !confirm('There is a saved draft in this browser. Loading this data will replace it. Continue?')){
+        return
+    }
+    applicaStatoImportato(normalizzato)
+    closePasteData()
 }
 
 // Applica uno stato ripristinato dalla cronologia e RIDISEGNA TUTTO. Prima
@@ -1925,7 +2025,10 @@ document.addEventListener('click', function(event){
     }
 })
 document.addEventListener('keydown', function(event){
-    if (event.key === 'Escape') chiudiMenuFase()
+    if (event.key === 'Escape'){
+        chiudiMenuFase()
+        closePasteData()
+    }
 })
 
 /* Gantt ombra: stessa pianificazione della base, con in coda a ogni fase i

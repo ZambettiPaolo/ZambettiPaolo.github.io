@@ -28,6 +28,11 @@
         <button class="btn btn-light" onclick="downloadData()">
             <i class="bi bi-download"></i>
             <span id="downloadLabel">Download data</span></button>
+        <button class="btn btn-light" onclick="copyData()" title="Copy the current data as JSON">
+            <i class="bi bi-clipboard"></i> Copy data</button>
+        <button class="btn btn-light" onclick="openPasteData()" title="Paste EasyGANTT JSON or exported HTML">
+            <i class="bi bi-clipboard-check"></i> Paste data</button>
+        <span id="copyDataStatus" class="ml-2" aria-live="polite"></span>
         <button class="btn btn-light" onclick="undo()">
             <i class="bi bi-arrow-counterclockwise" ></i> Undo</button>
         <button class="btn btn-light" onclick="redo()">
@@ -386,6 +391,24 @@
     <div id="phaseMenu" class="phase-menu" style="display:none">
         <button type="button" id="menuExtend" onclick="menuEstendiFase()">Extend by 1 day</button>
         <button type="button" onclick="menuDichiaraFinita()">Mark as finished</button>
+    </div>
+    <div id="pasteDataModal" class="data-modal" role="dialog" aria-modal="true"
+         aria-labelledby="pasteDataTitle"
+         onclick="if (event.target === this) closePasteData()">
+        <div class="data-modal-box">
+            <h3 id="pasteDataTitle">Paste EasyGANTT data</h3>
+            <p>Paste the JSON produced by EasyGANTT or by the chat. An exported
+                HTML file is also accepted. If the JSON contains a
+                <code>results</code> block, EasyGANTT ignores it and recomputes
+                the schedule.</p>
+            <textarea id="pasteDataText" spellcheck="false"
+                placeholder='{"meta": {...}, "data": [...], "setResources": [...]}'></textarea>
+            <div class="data-modal-actions">
+                <span id="pasteDataStatus" class="data-modal-status" aria-live="polite"></span>
+                <button type="button" class="btn btn-secondary" onclick="closePasteData()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyPastedData()">Apply</button>
+            </div>
+        </div>
     </div>
     <div id="cookieBanner">
         <span id="cookieMessage"></span>
