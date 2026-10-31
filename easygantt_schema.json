@@ -9,7 +9,7 @@
   "properties": {
     "llm": {
       "type": "object",
-      "description": "Istruzioni per un LLM che riceve il documento: istruzioni imperative, testo completo del prompt (quando disponibile), link, schemi e comando. L'app e la libreria lo ignorano.",
+      "description": "Istruzioni per un LLM che riceve il documento: istruzioni imperative, testo completo del prompt (quando disponibile), link, schemi e comando. L'app e la libreria lo ignorano; l'LLM può ometterlo nella risposta, l'app lo reinietta.",
       "properties": {
         "instructions": { "type": "string" },
         "prompt": { "type": "string" },
@@ -50,7 +50,7 @@
         },
         "version": {
           "type": "object",
-          "description": "Opzionale, aggiunto dall'export dell'app. Ignorato in lettura."
+          "description": "Opzionale, aggiunto dall'export dell'app. Ignorato in lettura; l'LLM può ometterlo, l'app lo reinietta."
         },
         "workWeekend": {
           "type": "boolean",

@@ -75,6 +75,10 @@ quindi non entra nello stato né nei risultati: serve all'LLM per leggere le
 istruzioni senza aprire un link. Se la fetch del prompt fallisce, resta il
 link e il pannello lo segnala con "Instructions link only".
 
+Nella risposta l'LLM può omettere `llm` e `meta.version`: l'app li reinietta
+all'esportazione. Il prompt lo dichiara, così non deve ripetere ~10 KB di
+`prompt_text` a ogni modifica.
+
 `build` usa come template l'`index.html` accanto a `easygantt.py`. Il file
 generato carica CSS e script da `https://easygantt.net/`; per un uso offline
 passa `--base` con la cartella locale che contiene l'app:
