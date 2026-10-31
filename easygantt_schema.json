@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easygantt.net/easygantt_schema.json",
+  "title": "EasyGANTT state",
+  "description": "Stato completo accettato da EasyGANTT. I vincoli che dipendono dall'indice della fase (start) o dai nomi delle risorse sono verificati da easygantt.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["meta", "data", "setResources"],
+  "properties": {
+    "llm": {
+      "type": "object",
+      "description": "Istruzioni per un LLM che riceve il documento: istruzioni imperative, testo completo del prompt (quando disponibile), link, schemi e comando. L'app e la libreria lo ignorano; l'LLM può ometterlo nella risposta, l'app lo reinietta.",
+      "properties": {
+        "instructions": { "type": "string" },
+        "prompt": { "type": "string" },
+        "prompt_text": { "type": "string" },
+        "engine": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "schema": { "type": "string" },
+        "resultsSchema": { "type": "string" },
+        "command": { "type": "string" },
+        "closing": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["creationDate", "workingDays", "durationUnit"],
+      "properties": {
+        "creationDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Primo giorno del calendario; la pianificazione parte dal primo giorno lavorativo >= questa data."
+        },
+        "workingDays": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": { "type": "boolean" },
+          "contains": { "const": true },
+          "description": "Sette flag, domenica per prima (Date.getDay). Almeno uno true."
+        },
+        "durationUnit": {
+          "type": "string",
+          "enum": ["days", "hours"],
+          "description": "days = giorni lavorativi; hours = ore di effort, convertite con la capacita' delle risorse."
+        },
+        "version": {
+          "type": "object",
+          "description": "Opzionale, aggiunto dall'export dell'app. Ignorato in lettura; l'LLM può ometterlo, l'app lo reinietta."
+        },
+        "workWeekend": {
+          "type": "boolean",
+          "description": "Campo legacy: true significava tutti i giorni lavorativi. Preferire workingDays."
+        },
+        "llm": {
+          "type": "object",
+          "description": "Puntatori per un LLM che riceve il JSON: prompt, sorgenti del motore Python, schemi e comando. L'app e la libreria li ignorano.",
+          "properties": {
+            "prompt": { "type": "string" },
+            "engine": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "schema": { "type": "string" },
+            "resultsSchema": { "type": "string" },
+            "command": { "type": "string" },
+            "note": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "setResources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "holidays"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["startDate", "duration", "employed"],
+              "properties": {
+                "startDate": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "duration": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000,
+                  "description": "Durata in giorni lavorativi."
+                },
+                "employed": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "Percentuale di indisponibilita' della risorsa."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "delivery", "penalty", "phases"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "delivery": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "penalty": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "phases": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "duration", "uncertainty", "start", "resources"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "duration": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000,
+                  "description": "In giorni: 1-1000. In ore: 1-100000."
+                },
+                "uncertainty": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000,
+                  "description": "In giorni: 0-1000. In ore: 0-100000."
+                },
+                "finished": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Fase dichiarata finita: il fantasma dell'incertezza non viene piu' disegnato."
+                },
+                "start": {
+                  "type": "integer",
+                  "description": "1 = dopo la fine della precedente; 0 = inizio della precedente; -n = inizio della (n+1)-esima fase precedente. La prima fase deve essere 0."
+                },
+                "resources": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["name", "employed"],
+                    "properties": {
+                      "name": { "type": "string", "minLength": 1 },
+                      "employed": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "description": "Percentuale di impiego di una risorsa a tempo pieno."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

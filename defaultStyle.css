@@ -671,3 +671,130 @@ select{
 .select-risorsa select:focus {
     outline: none;
 }
+
+/* ---------------------------------------------------------------------------
+   Copia/incolla dei dati per il ciclo con la chat. Il modale e' indipendente
+   da Bootstrap JS: l'app carica solo il CSS, quindi niente data-toggle.
+--------------------------------------------------------------------------- */
+.data-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.data-modal.open {
+    display: flex;
+}
+.data-modal-box {
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    width: min(900px, 100%);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+}
+.data-modal-box h3 {
+    margin: 0 0 8px;
+    font-size: 1.25rem;
+    text-align: left;
+    color: #222;
+}
+.data-modal-box p {
+    margin: 0 0 10px;
+    color: #444;
+    font-size: 14px;
+}
+.data-modal-box textarea {
+    width: 100%;
+    min-height: 45vh;
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.data-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.data-modal-status {
+    min-height: 1.2em;
+    margin-right: auto;
+    font-size: 13px;
+    color: #b00020;
+}
+
+/* Pannello AI connect */
+.ai-connect-box {
+    max-height: 92vh;
+    overflow: auto;
+}
+.ai-connect-box textarea {
+    min-height: 28vh;
+}
+.ai-connect-step {
+    margin: 0 0 6px;
+}
+.ai-connect-copy {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 6px 0 10px;
+}
+.ai-connect-status {
+    font-size: 13px;
+    color: #2e7d32;
+}
+.ai-connect-status.warn {
+    color: #b00020;
+}
+.ai-connect-links {
+    margin-left: auto;
+    font-size: 13px;
+}
+.ai-connect-links a {
+    color: #0056b3;
+    text-decoration: underline;
+}
+.ai-connect-tip {
+    margin: 6px 0 0;
+    color: #666;
+    font-size: 12px;
+}
+
+/* Overlay del drag & drop: solo visivo, il drop arriva al documento. */
+.drop-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 24px;
+    text-align: center;
+    padding: 24px;
+    pointer-events: none;
+}
+.drop-overlay.open {
+    display: flex;
+}
+.drop-overlay > div {
+    background: rgba(0, 0, 0, 0.65);
+    border-radius: 8px;
+    padding: 24px 32px;
+}

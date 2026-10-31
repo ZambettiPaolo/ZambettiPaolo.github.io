@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "creationDate": "2026-09-01",
+    "workingDays": [false, true, true, true, true, true, false],
+    "durationUnit": "days"
+  },
+  "setResources": [
+    {
+      "name": "DESIGNER",
+      "holidays": [
+        { "startDate": "2026-09-14", "duration": 5, "employed": 100 }
+      ]
+    },
+    {
+      "name": "BUILDER",
+      "holidays": []
+    }
+  ],
+  "data": [
+    {
+      "name": "COFFEE MACHINE",
+      "delivery": "2026-12-11",
+      "penalty": 2,
+      "phases": [
+        {
+          "name": "DESIGN",
+          "duration": 12,
+          "uncertainty": 20,
+          "start": 0,
+          "finished": false,
+          "resources": [
+            { "name": "DESIGNER", "employed": 100 }
+          ]
+        },
+        {
+          "name": "BUILD",
+          "duration": 20,
+          "uncertainty": 5,
+          "start": 1,
+          "finished": false,
+          "resources": [
+            { "name": "BUILDER", "employed": 80 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "BOTTLE OPENER",
+      "delivery": "2026-11-20",
+      "penalty": 1,
+      "phases": [
+        {
+          "name": "CONCEPT",
+          "duration": 5,
+          "uncertainty": 2,
+          "start": 0,
+          "finished": false,
+          "resources": [
+            { "name": "DESIGNER", "employed": 50 }
+          ]
+        },
+        {
+          "name": "PRODUCTION",
+          "duration": 10,
+          "uncertainty": 0,
+          "start": 1,
+          "finished": false,
+          "resources": [
+            { "name": "BUILDER", "employed": 100 }
+          ]
+        }
+      ]
+    }
+  ]
+}
