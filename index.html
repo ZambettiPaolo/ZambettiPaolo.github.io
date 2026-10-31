@@ -28,6 +28,9 @@
         <button class="btn btn-light" onclick="downloadData()">
             <i class="bi bi-download"></i>
             <span id="downloadLabel">Download data</span></button>
+        <button class="btn btn-danger no-wrap" onclick="openAiConnect()" title="Copy project data for your AI, or paste the AI answer"
+                aria-haspopup="dialog" aria-controls="aiConnectModal">
+            <i class="bi bi-robot"></i> AI connect</button>
         <button class="btn btn-light" onclick="undo()">
             <i class="bi bi-arrow-counterclockwise" ></i> Undo</button>
         <button class="btn btn-light" onclick="redo()">
@@ -386,6 +389,41 @@
     <div id="phaseMenu" class="phase-menu" style="display:none">
         <button type="button" id="menuExtend" onclick="menuEstendiFase()">Extend by 1 day</button>
         <button type="button" onclick="menuDichiaraFinita()">Mark as finished</button>
+    </div>
+    <div id="aiConnectModal" class="data-modal" role="dialog" aria-modal="true"
+         aria-labelledby="aiConnectTitle"
+         onclick="if (event.target === this) closeAiConnect()">
+        <div class="data-modal-box ai-connect-box">
+            <h3 id="aiConnectTitle">AI connect</h3>
+            <p class="ai-connect-step"><strong>1.</strong> Copy the project
+                data. The JSON includes the full instructions and the engine
+                links.</p>
+            <div class="ai-connect-copy">
+                <button type="button" class="btn btn-primary" onclick="copyData()">Copy data</button>
+                <span id="copyDataStatus" class="ai-connect-status" aria-live="polite"></span>
+                <span id="aiPromptStatus" class="ai-connect-status" aria-live="polite"></span>
+                <span class="ai-connect-links">
+                    <a id="aiPromptLink" href="#" target="_blank" rel="noopener">Prompt</a>
+                    · <a id="aiEngineLink" href="#" target="_blank" rel="noopener">Engine sources</a>
+                </span>
+            </div>
+            <p class="ai-connect-step"><strong>2.</strong> Paste it into your
+                AI chat and ask it to run the simulation.</p>
+            <p class="ai-connect-step"><strong>3.</strong> Paste the result
+                here, then click Apply.</p>
+            <textarea id="aiConnectText" spellcheck="false"
+                placeholder='{"meta": {...}, "data": [...], "setResources": [...]}'></textarea>
+            <p class="ai-connect-tip">Tip: you can also press Ctrl+V anywhere
+                outside a field.</p>
+            <div class="data-modal-actions">
+                <span id="aiConnectStatus" class="data-modal-status" aria-live="polite"></span>
+                <button type="button" class="btn btn-secondary" onclick="closeAiConnect()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyAiConnectData()">Apply</button>
+            </div>
+        </div>
+    </div>
+    <div id="dropOverlay" class="drop-overlay" aria-hidden="true">
+        <div>Drop your EasyGANTT JSON or HTML to load it</div>
     </div>
     <div id="cookieBanner">
         <span id="cookieMessage"></span>
