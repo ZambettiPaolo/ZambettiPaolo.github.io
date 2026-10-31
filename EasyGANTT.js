@@ -845,7 +845,7 @@ function metadatiLLM(){
         ],
         schema: LLM_DOCS_BASE + 'easygantt_schema.json',
         resultsSchema: LLM_DOCS_BASE + 'easygantt_results_schema.json',
-        command: 'python easygantt.py simulate input.json -o output.json',
+        command: 'python easygantt.py simulate input.json -o results.json',
         note: 'Results are computed by the engine, not by the page.'
     }
 }

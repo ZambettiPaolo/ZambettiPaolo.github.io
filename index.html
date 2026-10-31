@@ -398,9 +398,9 @@
         <div class="data-modal-box">
             <h3 id="pasteDataTitle">Paste EasyGANTT data</h3>
             <p>Paste the JSON produced by EasyGANTT or by the chat. An exported
-                HTML file is also accepted. If the JSON contains a
-                <code>results</code> block, EasyGANTT ignores it and recomputes
-                the schedule.</p>
+                HTML file is also accepted. Only <code>meta</code>,
+                <code>data</code> and <code>setResources</code> are used;
+                other fields are ignored.</p>
             <textarea id="pasteDataText" spellcheck="false"
                 placeholder='{"meta": {...}, "data": [...], "setResources": [...]}'></textarea>
             <div class="data-modal-actions">

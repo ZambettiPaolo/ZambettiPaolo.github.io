@@ -25,7 +25,7 @@ di `EasyGANTT.js`, quindi:
 | `easygantt_engine.py` | port del motore: piano base, ritardi, uso risorse |
 | `easygantt_prompt.md` | system prompt da incollare nella chat |
 | `easygantt_schema.json` | JSON Schema del documento di input |
-| `easygantt_results_schema.json` | JSON Schema del blocco `results` |
+| `easygantt_results_schema.json` | JSON Schema dell'output di `simulate` (file separato) |
 | `examples/easygantt-coffee.json` | esempio valido |
 | `tests/test_easygantt.py` | test con `unittest`, con valori di riferimento dal motore JS |
 
@@ -38,30 +38,24 @@ python easygantt.py validate progetto.json
 # Normalizza (limita i valori fuori range, scarta le voci malformate)
 python easygantt.py normalize progetto.json -o progetto.normalized.json
 
-# Calcola i risultati: date, ritardi, costo, uso risorse
-python easygantt.py simulate progetto.json -o progetto.simulato.json
+# Calcola i risultati in un file separato: date, ritardi, costo, uso risorse
+python easygantt.py simulate progetto.json -o risultati.json
 
-# Costruisce il file HTML (con i risultati incorporati, se presenti)
-python easygantt.py build progetto.simulato.json -o progetto.html
+# Costruisce il file HTML dal progetto (solo input, niente risultati)
+python easygantt.py build progetto.json -o progetto.html
 
 # Estrae lo stato da un HTML già esportato (per poi modificarlo con la chat)
 python easygantt.py extract progetto.html -o progetto.json
-
-# Come sopra, conservando anche il blocco results
-python easygantt.py extract progetto.html --results -o progetto.json
 ```
 
-`simulate` produce un JSON composto da due parti:
+`simulate` produce **solo i risultati**, in un file separato dal progetto:
+per ogni progetto e fase inizio/fine, giorni lavorativi, ritardo, costo, uso
+delle risorse, totali e `inputHash`. Non va incorporato nel JSON del progetto
+né nell'HTML: l'app lo ignora e ricalcola. Serve all'LLM per ragionare.
 
-- l'**input** normalizzato (`meta`, `data`, `setResources`), identico a quello
-  che l'app si aspetta;
-- il blocco **`results`**, calcolato dal motore: per ogni progetto e fase
-  inizio/fine, giorni lavorativi, ritardo, costo, uso delle risorse, totali e
-  `inputHash`.
-
-L'app ignora `results` quando apre il file: è un blocco per l'LLM e per chi
-legge il JSON. Se l'input cambia, il blocco diventa obsoleto e va ricalcolato
-(`inputHash` serve a accorgersene).
+Il documento del progetto resta `meta`, `data`, `setResources` (più
+`meta.llm`, che l'app e la libreria ignorano). Se l'input cambia, i risultati
+sono obsoleti: rilancia `simulate`; `inputHash` serve a accorgersene.
 
 L'app aggiunge al JSON copiato/esportato un blocco `meta.llm` con i link a
 questo prompt, ai sorgenti Python, agli schemi e al comando `simulate`.
@@ -91,11 +85,11 @@ state = result["state"]
 if state is None:
     raise SystemExit("Dati non validi")
 
-# Input + results (date, ritardi, costo, risorse)
-document = simulate(state)
+# I risultati sono un oggetto separato: servono per l'analisi, non per l'HTML.
+results = simulate(state)
 
-# L'HTML incorpora anche il blocco results; l'app lo ignora.
-html = build_html(document, base_url="https://easygantt.net/")
+# L'HTML contiene solo l'input del progetto.
+html = build_html(state, base_url="https://easygantt.net/")
 open("progetto.html", "w", encoding="utf-8").write(html)
 ```
 
@@ -105,23 +99,24 @@ open("progetto.html", "w", encoding="utf-8").write(html)
    personalizzato).
 2. Chiedi il progetto: la chat restituisce un blocco JSON completo.
 3. Salvalo come `progetto.json` e lancia `python easygantt.py validate`.
-4. `python easygantt.py simulate progetto.json -o progetto.simulato.json`:
-   ottieni le date, i ritardi e i costi.
-5. Passa `progetto.simulato.json` alla chat: ora vede i risultati e può
-   ragionare ("siamo in ritardo di 3 giorni", "conviene spostare questa fase").
-6. `python easygantt.py build progetto.simulato.json -o progetto.html`.
+4. `python easygantt.py simulate progetto.json -o risultati.json`: ottieni
+   le date, i ritardi e i costi in un file separato.
+5. Passa il progetto e/o `risultati.json` alla chat: ora vede i risultati e
+   può ragionare ("siamo in ritardo di 3 giorni", "conviene spostare questa
+   fase").
+6. `python easygantt.py build progetto.json -o progetto.html`.
 7. Apri `progetto.html` nel browser: EasyGANTT mostra i dati e ricalcola la
    pianificazione.
-8. Per modificare: la chat restituisce il documento aggiornato **senza**
-   `results` (sono obsoleti); ripeti dal punto 3. Il file produce un nuovo
-   `inputHash`, così sai che i risultati sono aggiornati.
+8. Per modificare: la chat restituisce solo il documento aggiornato (`meta`,
+   `data`, `setResources`), senza risultati; ripeti dal punto 3.
 
-Se la chat ha un code interpreter, può eseguire lei `easygantt.py simulate`
-(e `build`) nel suo ambiente: il ciclo diventa automatico. Se non ce l'ha,
+Se la chat ha un code interpreter, può scaricare il motore ed eseguire lei
+`simulate` nel suo ambiente: il ciclo diventa automatico. Se non ce l'ha,
 l'utente esegue i comandi tra un messaggio e l'altro.
 
-La chat non apre file e non calcola la pianificazione: il giro è manuale, ma
-funziona con qualunque chat, anche gratuita, senza chiavi e senza server.
+La chat non apre file locali da sola: l'utente passa il JSON. Il documento
+scambiato è solo input; i risultati sono un file di lavoro separato, così non
+finiscono mai nel progetto o nell'HTML.
 
 ## Cosa fa e cosa non fa
 
@@ -135,7 +130,7 @@ funziona con qualunque chat, anche gratuita, senza chiavi e senza server.
   id="easygantt-data">` con l'escape di `<`, U+2028 e U+2029;
 - **calcola il piano base** con il port Python del motore: date di inizio e
   fine per fase/progetto, ritardo in giorni lavorativi, costo, uso delle
-  risorse, totali (`simulate`).
+  risorse, totali; `simulate` li scrive in un file **separato** dal progetto.
 
 **Non fa:**
 - non simula la proiezione con incertezza (il "fantasma"): riporta solo

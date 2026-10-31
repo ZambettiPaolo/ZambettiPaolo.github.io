@@ -34,8 +34,8 @@ Uso da libreria:
 Uso da riga di comando:
 
     python easygantt.py validate progetto.json
-    python easygantt.py simulate progetto.json -o progetto.simulato.json
-    python easygantt.py build progetto.simulato.json -o progetto.html
+    python easygantt.py simulate progetto.json -o risultati.json
+    python easygantt.py build progetto.json -o progetto.html
     python easygantt.py extract progetto.html -o progetto.json
 
 Il file HTML generato carica l'app da https://easygantt.net/ (override con
@@ -433,12 +433,12 @@ def validate_state(raw: Any) -> dict[str, Any]:
 
 
 def simulate(state: Any) -> dict[str, Any]:
-    """Restituisce l'input normalizzato con il blocco `results` calcolato.
+    """Calcola i risultati della simulazione, separati dal documento.
 
     Il calcolo e' nel port Python del motore (easygantt_engine.py): date di
-    inizio/fine, ritardi, costo e uso delle risorse. L'app resta il
-    riferimento; questo blocco serve all'LLM per vedere i risultati senza
-    doverli ricalcolare a mano.
+    inizio/fine, ritardi, costo e uso delle risorse. I risultati servono
+    all'LLM per ragionare; **non** fanno parte del JSON del progetto e non
+    vengono incorporati nell'HTML. Per costruire l'HTML si passa l'input.
 
     L'import e' locale per evitare il ciclo easygantt -> engine -> easygantt.
     """
@@ -448,7 +448,7 @@ def simulate(state: Any) -> dict[str, Any]:
     normalized = normalize_state(state, warnings)
     if normalized is None:
         raise EasyGanttError("Stato EasyGANTT non valido.")
-    return {**normalized, "results": build_results(normalized, warnings)}
+    return build_results(normalized, warnings)
 
 
 # ---------------------------------------------------------------------------
@@ -483,14 +483,8 @@ def build_html(
     if normalized is None:
         raise EasyGanttError("Stato EasyGANTT non valido.")
 
-    # I risultati non fanno parte dello stato che l'app legge (normalizeState
-    # li ignora), ma restano nel blocco JSON per chi legge il file: LLM o
-    # utente. Se il documento non li ha, l'export resta quello di prima.
-    results = state.get("results") if isinstance(state, dict) else None
-    payload = dict(normalized)
-    if isinstance(results, dict):
-        payload["results"] = results
-
+    # Un eventuale blocco `results` non viene incorporato: l'HTML contiene
+    # solo l'input che l'app legge. I risultati li calcola l'LLM col motore.
     if template is None:
         template = Path(__file__).with_name("index.html")
     html = Path(template).read_text(encoding="utf-8-sig")
@@ -510,7 +504,7 @@ def build_html(
     block = (
         f'<base href="{html_escape(base, quote=True)}">\n'
         f'<script type="application/json" id="{DATA_BLOCK_ID}">'
-        f"{json_for_html(payload)}</script>\n"
+        f"{json_for_html(normalized)}</script>\n"
     )
 
     if '<meta charset="UTF-8">' in html:
@@ -542,11 +536,11 @@ class _EasyGanttDataParser(HTMLParser):
             self.parts.append(data)
 
 
-def extract_html(html: str, include_results: bool = False) -> dict[str, Any]:
+def extract_html(html: str) -> dict[str, Any]:
     """Legge e valida il blocco easygantt-data di un HTML esportato.
 
-    Con `include_results=True` il blocco `results` (se presente) viene
-    conservato accanto all'input normalizzato.
+    Restituisce solo l'input. Un eventuale blocco `results` viene ignorato:
+    i risultati non fanno parte del documento del progetto.
     """
     parser = _EasyGanttDataParser()
     parser.feed(html)
@@ -564,8 +558,6 @@ def extract_html(html: str, include_results: bool = False) -> dict[str, Any]:
         raise EasyGanttError(
             "Il blocco easygantt-data non contiene uno stato EasyGANTT valido."
         )
-    if include_results and isinstance(raw.get("results"), dict):
-        state["results"] = raw["results"]
     return state
 
 
@@ -635,7 +627,7 @@ def main(argv: list[str] | None = None) -> int:
 
     simulate_parser = sub.add_parser(
         "simulate",
-        help="Calcola il blocco results (date, ritardi, costo, risorse).",
+        help="Calcola i risultati in un file separato (date, ritardi, costo, risorse).",
     )
     simulate_parser.add_argument("input")
     simulate_parser.add_argument("-o", "--output")
@@ -661,11 +653,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     extract_parser.add_argument("input")
     extract_parser.add_argument("-o", "--output")
-    extract_parser.add_argument(
-        "--results",
-        action="store_true",
-        help="Conserva il blocco results, se presente nell'HTML.",
-    )
 
     args = parser.parse_args(argv)
 
@@ -714,9 +701,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "extract":
-            state = extract_html(
-                _read_text(args.input), include_results=args.results
-            )
+            state = extract_html(_read_text(args.input))
             _write_json(state, args.output)
             return 0
 

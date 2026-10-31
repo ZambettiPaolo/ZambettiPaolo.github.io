@@ -147,9 +147,11 @@ class NormalizeTests(unittest.TestCase):
         }
         state = eg.normalize_state(raw)
         self.assertNotIn("llm", state["meta"])
-        # Il resto dello stato resta valido e simulabile.
-        document = eg.simulate(raw)
-        self.assertIn("results", document)
+        # Il resto dello stato resta valido e simulabile; i risultati sono
+        # separati dal documento.
+        results = eg.simulate(raw)
+        self.assertIn("projects", results)
+        self.assertNotIn("meta", results)
 
 
 class HtmlTests(unittest.TestCase):
@@ -218,7 +220,7 @@ class EngineTests(unittest.TestCase):
         raw = json.loads(
             (ROOT / "examples" / "easygantt-coffee.json").read_text(encoding="utf-8")
         )
-        results = eg.simulate(raw)["results"]
+        results = eg.simulate(raw)
         self.assertEqual(results["daysTotal"], 74)
 
         projects = {project["name"]: project for project in results["projects"]}
@@ -306,7 +308,7 @@ class EngineTests(unittest.TestCase):
                 }
             ],
         }
-        results = eg.simulate(raw)["results"]
+        results = eg.simulate(raw)
         project = results["projects"][0]
         self.assertEqual(project["finish"], "2026-09-14")
         self.assertEqual(project["delayWorkingDays"], 9)
@@ -319,25 +321,25 @@ class EngineTests(unittest.TestCase):
         raw = json.loads(
             (ROOT / "examples" / "easygantt-coffee.json").read_text(encoding="utf-8")
         )
-        first = eg.simulate(raw)["results"]["inputHash"]
+        first = eg.simulate(raw)["inputHash"]
         raw["data"][0]["penalty"] = 5
-        second = eg.simulate(raw)["results"]["inputHash"]
+        second = eg.simulate(raw)["inputHash"]
         self.assertNotEqual(first, second)
 
-    def test_build_html_keeps_results(self):
+    def test_build_html_ignores_results(self):
         raw = json.loads(
             (ROOT / "examples" / "easygantt-coffee.json").read_text(encoding="utf-8")
         )
-        document = eg.simulate(raw)
+        document = dict(raw)
+        document["results"] = {"daysTotal": 999, "projects": []}
         with tempfile.TemporaryDirectory() as tmp:
             template = Path(tmp) / "index.html"
             template.write_text(MINIMAL_TEMPLATE, encoding="utf-8")
             html = eg.build_html(document, template=template)
-            recovered = eg.extract_html(html, include_results=True)
-            self.assertIn("results", recovered)
-            self.assertEqual(recovered["results"]["daysTotal"], 74)
-            # Senza include_results il blocco derivato viene scartato.
-            self.assertNotIn("results", eg.extract_html(html))
+            self.assertNotIn("daysTotal", html)
+            recovered = eg.extract_html(html)
+            self.assertNotIn("results", recovered)
+            self.assertEqual(recovered["data"][0]["name"], "COFFEE MACHINE")
 
 
 class ExampleTests(unittest.TestCase):

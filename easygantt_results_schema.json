@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://easygantt.net/easygantt_results_schema.json",
-  "title": "EasyGANTT simulation results",
-  "description": "Blocco `results` calcolato dal motore: piano base, date, ritardi, costo e uso delle risorse. E' un dato derivato: se l'input cambia, va ricalcolato.",
+  "title": "EasyGANTT simulation results (simulate output)",
+  "description": "Output di `easygantt.py simulate`: piano base, date, ritardi, costo e uso delle risorse. E' un file separato dal documento del progetto; non va incorporato nel JSON o nell'HTML del progetto. Se l'input cambia, va ricalcolato.",
   "type": "object",
   "required": [
     "schema",

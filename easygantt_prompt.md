@@ -18,13 +18,14 @@ directory:
 Then run:
 
 ```bash
-python easygantt.py simulate input.json -o output.json
+python easygantt.py simulate input.json -o results.json
 ```
 
-`output.json` contains the input plus the `results` block (dates, delays,
-cost, resource usage). If you cannot download the files, ask the user to
-attach `easygantt.py` and `easygantt_engine.py`; do not try to reimplement
-the engine. The Python uses only the standard library (Python 3.10+).
+`results.json` contains the simulation results (dates, delays, cost,
+resource usage) as a **separate** file: it is not part of the project input.
+If you cannot download the files, ask the user to attach `easygantt.py` and
+`easygantt_engine.py`; do not try to reimplement the engine. The Python uses
+only the standard library (Python 3.10+).
 
 After the branch is merged, replace `feature/easygantt-py` with `main` or a
 tag in these links.
@@ -40,8 +41,8 @@ tag in these links.
 6. If the request needs a clarification, ask one short question and output no
    JSON. If you must assume something, write at most one short sentence before
    the JSON block.
-7. If you change any input, **remove the `results` block** from the document
-   you return: the old results are stale. Never invent results.
+7. The document you return contains **no `results` block**: results are
+   computed separately by the engine. Never invent results.
 
 ## Document shape
 
@@ -144,34 +145,39 @@ tag in these links.
   - `employed`: integer 1–100, the percentage of a full-time resource.
   - A phase with no resources has capacity 1 (8 hours = one working day).
 
-### results (computed — read-only truth)
+### Results (computed separately)
 
-The document may contain a `results` object computed by the EasyGANTT engine
-(the app or `easygantt.py simulate`). It is read-only truth: use it, never
-recompute it by hand.
+The project document contains only input (`meta`, `data`, `setResources`).
+To see dates, delays, costs and resource usage, run:
 
-- `results.projects[].start`, `.finish`, `.delayWorkingDays`, `.cost`,
-  `.onTime`
-- `results.projects[].phases[].start`, `.finish`, `.workingDays`,
+```bash
+python easygantt.py simulate input.json -o results.json
+```
+
+`results.json` is a **separate** file: use it for reasoning, but never copy
+it into the document you return. The app ignores a `results` block and
+recomputes the schedule.
+
+In `results.json` (the root is the results object):
+
+- `projects[].start`, `.finish`, `.delayWorkingDays`, `.cost`, `.onTime`
+- `projects[].phases[].start`, `.finish`, `.workingDays`,
   `.uncertaintyWorkingDays`, `.resources[].resourceDays`
-- `results.totals`: `delayWorkingDays`, `cost`, `projectsLate`,
-  `projectsOnTime`
-- `results.resources`: `busyDays`, `peakEmployed`, `utilization`
-- `results.daysTotal`, `results.calendar`, `results.durationUnit`
-- `results.inputHash`: hash of the input the results were computed from. If
-  present and the input changed, the results are stale.
+- `totals`: `delayWorkingDays`, `cost`, `projectsLate`, `projectsOnTime`
+- `resources`: `busyDays`, `peakEmployed`, `utilization`
+- `daysTotal`, `calendar`, `durationUnit`
+- `inputHash`: hash of the input the results were computed from. If the
+  input changed, rerun `simulate`.
 
 Rules:
 
-- If `results` is present, answer using it.
-- If `results` is absent or stale, ask the user to run
-  `python easygantt.py simulate progetto.json -o progetto.simulato.json`
-  (or open the app) and provide the output.
-- When you change any input, omit the `results` block from the JSON you
-  return: the old results are stale. The user will re-run the simulation.
-- Never invent dates, delays, costs or resource usage. If the user asks
-  "when will it finish?" or "are we late?" and there are no results, say that
-  a simulation is needed.
+- Use the results for your analysis; do not recompute dates, delays or costs
+  by hand.
+- When you change the input, the previous results are stale: rerun
+  `simulate` (or ask the user to) before discussing dates.
+- The JSON you return has no `results` block: it is input only.
+- If the user asks "when will it finish?" or "are we late?" and you cannot
+  run the engine, ask for a simulation; do not invent numbers.
 
 ## Validation rules
 
@@ -294,6 +300,6 @@ Before answering, verify:
 - [ ] `start` is valid for each phase position;
 - [ ] all ranges respected;
 - [ ] no HTML, scripts or instructions inside names;
-- [ ] if you changed the input, the `results` block is absent (stale);
-- [ ] if the user asked about dates, delays or costs, you used an existing
-  `results` block instead of inventing numbers.
+- [ ] the document contains no `results` block;
+- [ ] if the user asked about dates, delays or costs, you ran or requested
+  `simulate` and used its separate results.
