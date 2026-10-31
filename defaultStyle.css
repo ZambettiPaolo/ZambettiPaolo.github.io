@@ -758,6 +758,9 @@ select{
     font-size: 13px;
     color: #2e7d32;
 }
+.ai-connect-status.warn {
+    color: #b00020;
+}
 .ai-connect-links {
     margin-left: auto;
     font-size: 13px;

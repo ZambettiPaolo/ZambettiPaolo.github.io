@@ -42,6 +42,20 @@ const VERSION = {"major":0, "minor":6, "patch":0}
 // Documenti per il ciclo con la chat. Dopo il merge del branch passare a
 // "main"; il link finisce nei metadati del JSON copiato/esportato.
 const LLM_DOCS_BASE = 'https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/'
+// Testo del prompt per l'LLM, scaricato una volta all'avvio. CORS e' aperto
+// su raw.githubusercontent.com; se la fetch fallisce resta il link.
+var llmPromptText = null
+function caricaPromptLLM(){
+    return fetch(LLM_DOCS_BASE + 'easygantt_prompt.md')
+        .then(function (response) { return response.ok ? response.text() : null })
+        .then(function (testo) {
+            if (testo) llmPromptText = testo
+            aggiornaStatoPromptLLM()
+            return testo
+        })
+        .catch(function () { return null })
+}
+caricaPromptLLM()
 var projectDelay = []
 var selectedProjectIndex = 0
 var selectedPhaseIndex = 0
@@ -840,9 +854,22 @@ function applicaStatoImportato(normalizzato){
 /* Puntatori per un LLM che riceve il JSON. Non fanno parte dello stato:
    normalizeState li ignora e l'app non li salva. Servono a far trovare
    prompt e motore senza doverli passare a parte. */
+function aggiornaStatoPromptLLM(){
+    const promptStatus = document.getElementById('aiPromptStatus')
+    if (!promptStatus) return
+    promptStatus.textContent = llmPromptText ? 'Instructions loaded' : 'Instructions link only'
+    promptStatus.classList.toggle('warn', !llmPromptText)
+}
+
 function metadatiLLM(){
-    return {
-        prompt: LLM_DOCS_BASE + 'easygantt_prompt.md',
+    const dati = {
+        instructions: 'You are the EasyGANTT planner. The full instructions are in prompt_text (or at prompt). Read and follow them before answering. Do not ask the user to paste the prompt if prompt_text is present. End with the copy/paste instruction in closing.',
+        prompt: LLM_DOCS_BASE + 'easygantt_prompt.md'
+    }
+    // Inserito subito dopo `prompt` quando la fetch e' gia' arrivata; se
+    // manca, le istruzioni dicono di aprire il link o chiedere il testo.
+    if (llmPromptText) dati.prompt_text = llmPromptText
+    Object.assign(dati, {
         engine: [
             LLM_DOCS_BASE + 'easygantt.py',
             LLM_DOCS_BASE + 'easygantt_engine.py'
@@ -850,15 +877,17 @@ function metadatiLLM(){
         schema: LLM_DOCS_BASE + 'easygantt_schema.json',
         resultsSchema: LLM_DOCS_BASE + 'easygantt_results_schema.json',
         command: 'python easygantt.py simulate input.json -o results.json',
-        note: 'Results are computed by the engine, not by the page.'
-    }
+        closing: 'Copy the JSON above, open EasyGANTT, click AI connect, paste it into "Paste the result here" and click Apply.'
+    })
+    return dati
 }
 
 /* JSON corrente per il ciclo con la chat. E' solo l'input: i risultati li
    calcola il motore (l'app con algorithm2.js, la chat con easygantt.py). */
 function datiCorrentiJSON(){
     return JSON.stringify({
-        meta: Object.assign({}, meta, {llm: metadatiLLM()}),
+        llm: metadatiLLM(),
+        meta: Object.assign({}, meta, {version: VERSION}),
         data: data,
         setResources: setResources
     }, null, 2)
@@ -912,6 +941,9 @@ function openAiConnect(){
     if (promptLink) promptLink.href = links.prompt
     const engineLink = document.getElementById('aiEngineLink')
     if (engineLink) engineLink.href = links.engine[0]
+    aggiornaStatoPromptLLM()
+    const copyStatus = document.getElementById('copyDataStatus')
+    if (copyStatus) copyStatus.textContent = ''
     modal.classList.add('open')
     document.body.style.overflow = 'hidden'
     area.focus()
@@ -1044,8 +1076,12 @@ function downloadData(){
 function downloadJSON() {
     // meta.version NON viene scritta sull'oggetto vivo: era una mutazione non
     // annullabile dello stato (e finiva dentro la cronologia di undo).
-    var out = {"meta": Object.assign({}, meta, {version: VERSION, llm: metadatiLLM()}),
-               "data":data, "setResources": setResources }
+    var out = {
+        "llm": metadatiLLM(),
+        "meta": Object.assign({}, meta, {version: VERSION}),
+        "data": data,
+        "setResources": setResources
+    }
     const json = JSON.stringify(out, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -1061,7 +1097,8 @@ function downloadJSON() {
 // generaHTMLExport() per poterla provare senza rete.
 function componiHTMLExport(html){
     const dati = JSON.stringify({
-        meta: Object.assign({}, meta, {version: VERSION, llm: metadatiLLM()}),
+        llm: metadatiLLM(),
+        meta: Object.assign({}, meta, {version: VERSION}),
         data: data,
         setResources: setResources
     })

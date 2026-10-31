@@ -396,11 +396,12 @@
         <div class="data-modal-box ai-connect-box">
             <h3 id="aiConnectTitle">AI connect</h3>
             <p class="ai-connect-step"><strong>1.</strong> Copy the project
-                data. The JSON already contains the prompt and the engine
+                data. The JSON includes the full instructions and the engine
                 links.</p>
             <div class="ai-connect-copy">
                 <button type="button" class="btn btn-primary" onclick="copyData()">Copy data</button>
                 <span id="copyDataStatus" class="ai-connect-status" aria-live="polite"></span>
+                <span id="aiPromptStatus" class="ai-connect-status" aria-live="polite"></span>
                 <span class="ai-connect-links">
                     <a id="aiPromptLink" href="#" target="_blank" rel="noopener">Prompt</a>
                     · <a id="aiEngineLink" href="#" target="_blank" rel="noopener">Engine sources</a>

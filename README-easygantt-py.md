@@ -63,14 +63,17 @@ lavorativi); per ogni progetto `baseFinish`, `finish`, ritardi e costo.
 La coda usa lo stesso impiego della fase base (versione "full effort").
 `--today` rende il calcolo deterministico; senza, usa la data corrente.
 
-Il documento del progetto resta `meta`, `data`, `setResources` (più
-`meta.llm`, che l'app e la libreria ignorano). Se l'input cambia, i risultati
+Il documento del progetto resta `meta`, `data`, `setResources` (più il blocco
+`llm`, che l'app e la libreria ignorano). Se l'input cambia, i risultati
 sono obsoleti: rilancia `simulate`; `inputHash` serve a accorgersene.
 
-L'app aggiunge al JSON copiato/esportato un blocco `meta.llm` con i link a
-questo prompt, ai sorgenti Python, agli schemi e al comando `simulate`.
-`normalize_state` lo ignora, quindi non entra nello stato né nei risultati:
-serve solo a far trovare all'LLM le istruzioni senza passarle a parte.
+L'app aggiunge al JSON copiato/esportato un blocco `llm` **in testa** con
+istruzioni imperative, il testo completo del prompt (scaricato da
+`easygantt_prompt.md`; CORS è aperto su raw.githubusercontent.com), i link ai
+sorgenti, gli schemi e il comando `simulate`. `normalize_state` lo ignora,
+quindi non entra nello stato né nei risultati: serve all'LLM per leggere le
+istruzioni senza aprire un link. Se la fetch del prompt fallisce, resta il
+link e il pannello lo segnala con "Instructions link only".
 
 `build` usa come template l'`index.html` accanto a `easygantt.py`. Il file
 generato carica CSS e script da `https://easygantt.net/`; per un uso offline
