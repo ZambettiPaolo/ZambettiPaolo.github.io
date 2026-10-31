@@ -14,7 +14,8 @@
     "daysTotal",
     "projects",
     "totals",
-    "resources"
+    "resources",
+    "ghost"
   ],
   "properties": {
     "schema": {
@@ -159,9 +160,74 @@
         }
       }
     },
-    "uncertainty": {
+    "ghost": {
       "type": "object",
-      "description": "Stato della proiezione con incertezza. Nel piano base included=false."
+      "description": "Proiezione con incertezza (fantasma): seconda schedulazione con la coda dopo ogni fase. included=false se nessuna fase ha una coda.",
+      "required": ["included", "today"],
+      "properties": {
+        "included": { "type": "boolean" },
+        "today": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "daysTotal": { "type": "integer", "minimum": 0 },
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "baseFinish",
+              "baseDelayWorkingDays",
+              "finish",
+              "delayWorkingDays",
+              "cost",
+              "onTime",
+              "phases"
+            ],
+            "properties": {
+              "name": { "type": "string" },
+              "delivery": { "type": "string" },
+              "baseFinish": { "type": ["string", "null"] },
+              "baseDelayWorkingDays": { "type": "integer" },
+              "finishSlot": { "type": "integer", "minimum": -1 },
+              "finish": { "type": ["string", "null"] },
+              "delayWorkingDays": { "type": "integer" },
+              "cost": { "type": "number", "minimum": 0 },
+              "onTime": { "type": "boolean" },
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "base", "uncertainty", "projected"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "base": { "type": ["object", "null"] },
+                    "uncertainty": { "type": ["object", "null"] },
+                    "projected": { "type": ["object", "null"] }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "totals": {
+          "type": "object",
+          "required": [
+            "delayWorkingDays",
+            "cost",
+            "projectsLate",
+            "projectsOnTime"
+          ],
+          "properties": {
+            "delayWorkingDays": { "type": "integer", "minimum": 0 },
+            "cost": { "type": "number", "minimum": 0 },
+            "projectsLate": { "type": "integer", "minimum": 0 },
+            "projectsOnTime": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "note": { "type": "string" }
+      },
+      "additionalProperties": true
     },
     "warnings": {
       "type": "array",

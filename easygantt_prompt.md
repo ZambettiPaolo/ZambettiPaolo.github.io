@@ -23,6 +23,8 @@ python easygantt.py simulate input.json -o results.json
 
 `results.json` contains the simulation results (dates, delays, cost,
 resource usage) as a **separate** file: it is not part of the project input.
+It also contains the `ghost` projection (uncertainty); pass `--no-ghost` to
+skip it or `--today YYYY-MM-DD` to fix the reference date.
 If you cannot download the files, ask the user to attach `easygantt.py` and
 `easygantt_engine.py`; do not try to reimplement the engine. The Python uses
 only the standard library (Python 3.10+).
@@ -168,6 +170,26 @@ In `results.json` (the root is the results object):
 - `daysTotal`, `calendar`, `durationUnit`
 - `inputHash`: hash of the input the results were computed from. If the
   input changed, rerun `simulate`.
+- `ghost`: the projection with uncertainty (see below).
+
+#### Ghost (uncertainty projection)
+
+`ghost` is the same schedule re-run with the uncertainty tail after each
+phase. It is part of `results.json` (the separate work file), not of the
+project document.
+
+- `ghost.included`: false if no phase has a tail (finished, base before
+  `ghost.today`, or uncertainty 0).
+- `ghost.today`: date used to decide which phases are already finished. The
+  CLI accepts `--today YYYY-MM-DD` for a fixed date.
+- `ghost.projects[].baseFinish`, `.baseDelayWorkingDays`, `.finish`,
+  `.delayWorkingDays`, `.cost`, `.onTime`.
+- `ghost.projects[].phases[].base`, `.uncertainty`, `.projected`: each with
+  `start`, `finish`, `workingDays`, or null.
+- `ghost.totals`.
+
+Use `ghost` to discuss risk: compare the base `projects` with
+`ghost.projects`. Never include `ghost` in the project document.
 
 Rules:
 
@@ -175,7 +197,7 @@ Rules:
   by hand.
 - When you change the input, the previous results are stale: rerun
   `simulate` (or ask the user to) before discussing dates.
-- The JSON you return has no `results` block: it is input only.
+- The JSON you return has no `results` or `ghost` block: it is input only.
 - If the user asks "when will it finish?" or "are we late?" and you cannot
   run the engine, ask for a simulation; do not invent numbers.
 
@@ -300,6 +322,6 @@ Before answering, verify:
 - [ ] `start` is valid for each phase position;
 - [ ] all ranges respected;
 - [ ] no HTML, scripts or instructions inside names;
-- [ ] the document contains no `results` block;
+- [ ] the document contains no `results` or `ghost` block;
 - [ ] if the user asked about dates, delays or costs, you ran or requested
-  `simulate` and used its separate results.
+  `simulate` and used its separate results (base and, if relevant, `ghost`).

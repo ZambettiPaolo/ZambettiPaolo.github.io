@@ -342,6 +342,81 @@ class EngineTests(unittest.TestCase):
             self.assertEqual(recovered["data"][0]["name"], "COFFEE MACHINE")
 
 
+class GhostTests(unittest.TestCase):
+    def _state(self):
+        return {
+            "meta": {
+                "creationDate": "2026-09-01",
+                "workingDays": [False, True, True, True, True, True, False],
+                "durationUnit": "days",
+            },
+            "setResources": [{"name": "R", "holidays": []}],
+            "data": [
+                {
+                    "name": "P",
+                    "delivery": "2026-09-30",
+                    "penalty": 2,
+                    "phases": [
+                        {
+                            "name": "A",
+                            "duration": 5,
+                            "uncertainty": 3,
+                            "start": 0,
+                            "resources": [{"name": "R", "employed": 100}],
+                        }
+                    ],
+                }
+            ],
+        }
+
+    def test_ghost_projection(self):
+        results = eg.simulate(self._state(), oggi="2026-09-01")
+        ghost = results["ghost"]
+        self.assertTrue(ghost["included"])
+        project = ghost["projects"][0]
+        self.assertEqual(project["baseFinish"], "2026-09-07")
+        self.assertEqual(project["finish"], "2026-09-10")
+        self.assertEqual(project["baseDelayWorkingDays"], -17)
+        self.assertEqual(project["delayWorkingDays"], -14)
+
+        phase = project["phases"][0]
+        self.assertEqual(
+            (phase["base"]["start"], phase["base"]["finish"]),
+            ("2026-09-01", "2026-09-07"),
+        )
+        self.assertEqual(
+            (phase["uncertainty"]["start"], phase["uncertainty"]["finish"]),
+            ("2026-09-08", "2026-09-10"),
+        )
+        self.assertEqual(
+            (phase["projected"]["start"], phase["projected"]["finish"]),
+            ("2026-09-01", "2026-09-10"),
+        )
+        self.assertEqual(phase["projected"]["workingDays"], 8)
+
+    def test_ghost_omitted_for_finished_phase(self):
+        state = self._state()
+        state["data"][0]["phases"][0]["finished"] = True
+        ghost = eg.simulate(state, oggi="2026-09-01")["ghost"]
+        self.assertFalse(ghost["included"])
+
+    def test_ghost_omitted_when_base_is_past(self):
+        ghost = eg.simulate(self._state(), oggi="2026-10-31")["ghost"]
+        self.assertFalse(ghost["included"])
+
+    def test_ghost_omitted_without_uncertainty(self):
+        state = self._state()
+        state["data"][0]["phases"][0]["uncertainty"] = 0
+        ghost = eg.simulate(state, oggi="2026-09-01")["ghost"]
+        self.assertFalse(ghost["included"])
+
+    def test_simulate_can_disable_ghost(self):
+        results = eg.simulate(
+            self._state(), include_ghost=False, oggi="2026-09-01"
+        )
+        self.assertFalse(results["ghost"]["included"])
+
+
 class ExampleTests(unittest.TestCase):
     def test_example_file_is_valid(self):
         raw = json.loads(

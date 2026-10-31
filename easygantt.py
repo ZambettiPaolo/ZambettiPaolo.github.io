@@ -432,13 +432,21 @@ def validate_state(raw: Any) -> dict[str, Any]:
     return {"ok": state is not None, "state": state, "warnings": warnings}
 
 
-def simulate(state: Any) -> dict[str, Any]:
+def simulate(
+    state: Any,
+    include_ghost: bool = True,
+    oggi: str | None = None,
+) -> dict[str, Any]:
     """Calcola i risultati della simulazione, separati dal documento.
 
     Il calcolo e' nel port Python del motore (easygantt_engine.py): date di
-    inizio/fine, ritardi, costo e uso delle risorse. I risultati servono
-    all'LLM per ragionare; **non** fanno parte del JSON del progetto e non
-    vengono incorporati nell'HTML. Per costruire l'HTML si passa l'input.
+    inizio/fine, ritardi, costo e uso delle risorse. Con `include_ghost` il
+    risultato contiene anche la proiezione con incertezza (fantasma), che usa
+    `oggi` (YYYY-MM-DD; default: data corrente) per decidere le fasi concluse.
+
+    I risultati servono all'LLM per ragionare; **non** fanno parte del JSON
+    del progetto e non vengono incorporati nell'HTML. Per l'HTML si passa
+    l'input.
 
     L'import e' locale per evitare il ciclo easygantt -> engine -> easygantt.
     """
@@ -448,7 +456,12 @@ def simulate(state: Any) -> dict[str, Any]:
     normalized = normalize_state(state, warnings)
     if normalized is None:
         raise EasyGanttError("Stato EasyGANTT non valido.")
-    return build_results(normalized, warnings)
+    return build_results(
+        normalized,
+        warnings,
+        include_ghost=include_ghost,
+        oggi=oggi,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -631,6 +644,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     simulate_parser.add_argument("input")
     simulate_parser.add_argument("-o", "--output")
+    simulate_parser.add_argument(
+        "--no-ghost",
+        action="store_true",
+        help="Esclude la proiezione con incertezza (fantasma).",
+    )
+    simulate_parser.add_argument(
+        "--today",
+        default=None,
+        help="Data YYYY-MM-DD per la proiezione (default: oggi).",
+    )
 
     build_parser = sub.add_parser(
         "build", help="Crea un export HTML a file singolo."
@@ -686,7 +709,17 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "simulate":
-            document = simulate(load_document(args.input))
+            if args.today is not None and parse_iso_date(args.today) is None:
+                print(
+                    "error: --today deve essere una data YYYY-MM-DD.",
+                    file=sys.stderr,
+                )
+                return 2
+            document = simulate(
+                load_document(args.input),
+                include_ghost=not args.no_ghost,
+                oggi=args.today,
+            )
             _write_json(document, args.output)
             return 0
 

@@ -369,6 +369,259 @@ def calc_project_delay(
 
 
 # ---------------------------------------------------------------------------
+# Fantasma: proiezione con la coda di incertezza
+# ---------------------------------------------------------------------------
+
+def fine_fase_base(days: list[dict[str, Any]], used_index: int) -> int:
+    """Ultimo slot in cui la fase base (used=1) e' attiva; -1 se assente."""
+    for index in range(len(days) - 1, -1, -1):
+        day = days[index]
+        if day is not None and day["used"][used_index] == 1:
+            return index
+    return -1
+
+
+def indice_uso_fase(
+    data: list[dict[str, Any]], project_index: int, phase_index: int
+) -> int:
+    """Indice globale in used[] per una fase (0 e' riservato alle ferie)."""
+    if project_index < 0 or project_index >= len(data):
+        return -1
+    if phase_index < 0 or phase_index >= len(data[project_index]["phases"]):
+        return -1
+    n = 1
+    for index in range(project_index):
+        n += len(data[index]["phases"])
+    return n + phase_index
+
+
+def _today_date(oggi: str | date | None) -> date:
+    if oggi is None:
+        return date.today()
+    if isinstance(oggi, date):
+        return oggi
+    parsed = parse_iso_date(oggi)
+    if parsed is None:
+        raise ValueError(f"Data 'today' non valida: {oggi!r}")
+    return parsed
+
+
+def costruisci_gantt_ombra(
+    days: list[dict[str, Any]],
+    data: list[dict[str, Any]],
+    set_resources: list[dict[str, Any]],
+    meta: dict[str, Any],
+    oggi: str | date | None = None,
+) -> list[dict[str, Any]] | None:
+    """Port di costruisciGanttOmbra: seconda schedulazione con le code.
+
+    Una fase dichiarata finita, o la cui base e' finita prima di `oggi`,
+    non riceve coda. Restituisce None se nessuna fase ha una coda.
+    """
+    if not days:
+        return None
+    working_days = normalizza_giorni_lavorativi(meta.get("workingDays"))
+    today = _today_date(oggi)
+    today_slot = max(
+        0,
+        date_to_day_number(
+            format_iso_date(today), meta["creationDate"], working_days
+        ),
+    )
+    duration_unit = "hours" if meta.get("durationUnit") == "hours" else "days"
+    used_index = 1
+    has_uncertainty = False
+    ombra_data: list[dict[str, Any]] = []
+
+    for project in data:
+        phases = []
+        for phase in project.get("phases", []):
+            u0 = incertezza_giorni(phase, duration_unit)
+            fine = fine_fase_base(days, used_index)
+            finished = phase.get("finished") is True or (
+                fine >= 0 and fine < today_slot
+            )
+            remaining = u0 if (u0 > 0 and not finished) else 0
+            if remaining > 0:
+                has_uncertainty = True
+            phases.append(
+                {
+                    "name": phase["name"],
+                    "duration": phase["duration"],
+                    "start": phase.get("start"),
+                    "uncertaintyRemaining": remaining,
+                    "resources": [
+                        {"name": resource["name"], "employed": resource["employed"]}
+                        for resource in phase.get("resources", [])
+                    ],
+                }
+            )
+            used_index += 1
+        ombra_data.append(
+            {
+                "name": project.get("name"),
+                "delivery": project.get("delivery"),
+                "penalty": project.get("penalty", 0),
+                "phases": phases,
+            }
+        )
+
+    if not has_uncertainty:
+        return None
+    return GANTT(ombra_data, set_resources, meta).get_gantt()
+
+
+def _segment(
+    days: list[dict[str, Any]],
+    used_index: int,
+    codes: tuple[int, ...],
+    creation_date: str,
+    working_days: list[bool],
+) -> dict[str, Any] | None:
+    slots = [
+        index
+        for index, day in enumerate(days)
+        if day is not None and day["used"][used_index] in codes
+    ]
+    if not slots:
+        return None
+    return {
+        "startSlot": slots[0],
+        "endSlot": slots[-1],
+        "start": format_iso_date(
+            day_number_to_date(slots[0], creation_date, working_days)
+        ),
+        "finish": format_iso_date(
+            day_number_to_date(slots[-1], creation_date, working_days)
+        ),
+        "workingDays": len(slots),
+    }
+
+
+def _project_end_slots(
+    days: list[dict[str, Any]], data: list[dict[str, Any]]
+) -> list[int]:
+    result: list[int] = []
+    used_index = 1
+    for project in data:
+        indices = range(used_index, used_index + len(project["phases"]))
+        slots = [
+            index
+            for index, day in enumerate(days)
+            if any(day["used"][i] != 0 for i in indices)
+        ]
+        result.append(max(slots) if slots else -1)
+        used_index += len(project["phases"])
+    return result
+
+
+def build_ghost_results(
+    state: dict[str, Any], oggi: str | date | None = None
+) -> dict[str, Any]:
+    """Proiezione con incertezza (fantasma), separata dai risultati base."""
+    meta = state["meta"]
+    data = state["data"]
+    set_resources = state["setResources"]
+    today = _today_date(oggi)
+    today_text = format_iso_date(today)
+    working_days = normalizza_giorni_lavorativi(meta.get("workingDays"))
+    creation_date = meta["creationDate"]
+
+    base_days = GANTT(data, set_resources, meta).get_gantt()
+    ombra = costruisci_gantt_ombra(
+        base_days, data, set_resources, meta, oggi=today
+    )
+    if ombra is None:
+        return {
+            "included": False,
+            "today": today_text,
+            "note": (
+                "Nessuna fase ha una coda di incertezza: finita, base "
+                "conclusa prima di today, oppure incertezza 0."
+            ),
+        }
+
+    base_delays = calc_project_delay(base_days, data, meta)
+    ghost_delays = calc_project_delay(ombra, data, meta)
+    base_finishes = _project_end_slots(base_days, data)
+    ghost_finishes = _project_end_slots(ombra, data)
+
+    projects: list[dict[str, Any]] = []
+    used_index = 1
+    for project_index, project in enumerate(data):
+        phases: list[dict[str, Any]] = []
+        for phase in project["phases"]:
+            phases.append(
+                {
+                    "name": phase["name"],
+                    "base": _segment(
+                        ombra, used_index, (1,), creation_date, working_days
+                    ),
+                    "uncertainty": _segment(
+                        ombra, used_index, (2,), creation_date, working_days
+                    ),
+                    "projected": _segment(
+                        ombra, used_index, (1, 2), creation_date, working_days
+                    ),
+                }
+            )
+            used_index += 1
+
+        delay = ghost_delays[project_index]
+        base_finish_slot = base_finishes[project_index]
+        finish_slot = ghost_finishes[project_index]
+        projects.append(
+            {
+                "name": project["name"],
+                "delivery": project["delivery"],
+                "baseFinish": (
+                    format_iso_date(
+                        day_number_to_date(
+                            base_finish_slot, creation_date, working_days
+                        )
+                    )
+                    if base_finish_slot >= 0
+                    else None
+                ),
+                "baseDelayWorkingDays": base_delays[project_index],
+                "finishSlot": finish_slot,
+                "finish": (
+                    format_iso_date(
+                        day_number_to_date(
+                            finish_slot, creation_date, working_days
+                        )
+                    )
+                    if finish_slot >= 0
+                    else None
+                ),
+                "delayWorkingDays": delay,
+                "cost": max(0, delay) * project["penalty"],
+                "onTime": delay <= 0,
+                "phases": phases,
+            }
+        )
+
+    total_delay = sum(max(0, project["delayWorkingDays"]) for project in projects)
+    total_cost = sum(project["cost"] for project in projects)
+    return {
+        "included": True,
+        "today": today_text,
+        "daysTotal": len(ombra),
+        "projects": projects,
+        "totals": {
+            "delayWorkingDays": total_delay,
+            "cost": total_cost,
+            "projectsLate": sum(1 for p in projects if not p["onTime"]),
+            "projectsOnTime": sum(1 for p in projects if p["onTime"]),
+        },
+        "note": (
+            "Proiezione con incertezza. Le fasi finite o con base conclusa "
+            "prima di today non hanno coda."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Risultati per l'LLM
 # ---------------------------------------------------------------------------
 
@@ -385,12 +638,17 @@ def _input_hash(state: dict[str, Any]) -> str:
 
 
 def build_results(
-    state: dict[str, Any], warnings: list[str] | None = None
+    state: dict[str, Any],
+    warnings: list[str] | None = None,
+    include_ghost: bool = True,
+    oggi: str | date | None = None,
 ) -> dict[str, Any]:
-    """Calcola il blocco `results` da uno stato gia' normalizzato.
+    """Calcola i risultati da uno stato gia' normalizzato.
 
-    Il piano e' quello base; l'incertezza pianificata per fase e' riportata
-    in giorni ma non viene simulata come coda (il "fantasma" e' visuale).
+    Il piano base e' sempre presente. Con `include_ghost=True` viene
+    aggiunto il blocco `ghost`: la stessa schedulazione con la coda di
+    incertezza, usando `oggi` (default: data corrente) per decidere quali
+    fasi sono gia' concluse.
     """
     meta = state["meta"]
     data = state["data"]
@@ -525,7 +783,7 @@ def build_results(
         .replace("+00:00", "Z")
     )
 
-    return {
+    result = {
         "schema": "easygantt.results/1",
         "engine": "easygantt-py/1.0",
         "generatedAt": generated_at,
@@ -544,12 +802,14 @@ def build_results(
             "projectsOnTime": sum(1 for p in projects if p["onTime"]),
         },
         "resources": resources_result,
-        "uncertainty": {
-            "included": False,
-            "note": (
-                "Piano base. La proiezione con incertezza (fantasma) non e' "
-                "simulata; per ogni fase e' riportata uncertaintyWorkingDays."
-            ),
-        },
         "warnings": warnings or [],
     }
+    if include_ghost:
+        result["ghost"] = build_ghost_results(state, oggi=oggi)
+    else:
+        result["ghost"] = {
+            "included": False,
+            "today": format_iso_date(_today_date(oggi)),
+            "note": "Ghost disabled.",
+        }
+    return result

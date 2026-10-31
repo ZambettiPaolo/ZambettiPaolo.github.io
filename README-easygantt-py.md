@@ -39,7 +39,10 @@ python easygantt.py validate progetto.json
 python easygantt.py normalize progetto.json -o progetto.normalized.json
 
 # Calcola i risultati in un file separato: date, ritardi, costo, uso risorse
+# (include il fantasma; --no-ghost lo esclude, --today fissa la data)
 python easygantt.py simulate progetto.json -o risultati.json
+python easygantt.py simulate progetto.json --no-ghost -o risultati.json
+python easygantt.py simulate progetto.json --today 2026-09-01 -o risultati.json
 
 # Costruisce il file HTML dal progetto (solo input, niente risultati)
 python easygantt.py build progetto.json -o progetto.html
@@ -52,6 +55,13 @@ python easygantt.py extract progetto.html -o progetto.json
 per ogni progetto e fase inizio/fine, giorni lavorativi, ritardo, costo, uso
 delle risorse, totali e `inputHash`. Non va incorporato nel JSON del progetto
 né nell'HTML: l'app lo ignora e ricalcola. Serve all'LLM per ragionare.
+
+Il blocco `ghost` è la proiezione con incertezza: `included=false` se nessuna
+fase ha una coda (finita, base conclusa prima di `today`, oppure incertezza
+0). Per ogni fase riporta `base`, `uncertainty` e `projected` (date e giorni
+lavorativi); per ogni progetto `baseFinish`, `finish`, ritardi e costo.
+La coda usa lo stesso impiego della fase base (versione "full effort").
+`--today` rende il calcolo deterministico; senza, usa la data corrente.
 
 Il documento del progetto resta `meta`, `data`, `setResources` (più
 `meta.llm`, che l'app e la libreria ignorano). Se l'input cambia, i risultati
@@ -128,13 +138,16 @@ finiscono mai nel progetto o nell'HTML.
   (come `rigenSetResource()` nell'app);
 - costruisce ed estrae il blocco `<script type="application/json"
   id="easygantt-data">` con l'escape di `<`, U+2028 e U+2029;
-- **calcola il piano base** con il port Python del motore: date di inizio e
-  fine per fase/progetto, ritardo in giorni lavorativi, costo, uso delle
-  risorse, totali; `simulate` li scrive in un file **separato** dal progetto.
+- **calcola il piano base e il fantasma** con il port Python del motore: date
+  di inizio e fine per fase/progetto, ritardo in giorni lavorativi, costo, uso
+  delle risorse, totali; `simulate` li scrive in un file **separato** dal
+  progetto. Il blocco `ghost` contiene `base`, `uncertainty` e `projected` per
+  ogni fase, e il confronto tra fine base e fine con incertezza.
 
 **Non fa:**
-- non simula la proiezione con incertezza (il "fantasma"): riporta solo
-  `uncertaintyWorkingDays` per fase;
+- il fantasma usa la data corrente (o `--today`) e considera concluse le
+  fasi finite o con base prima di quella data; la preferenza di
+  visualizzazione dell'app (`mostraFantasma`) non c'entra;
 - non è la verità assoluta: l'app resta il riferimento. Il port va tenuto
   allineato a `algorithm2.js` e i test di parità usano i valori del motore JS;
 - non esegue JavaScript e non interpreta l'HTML della chat;
@@ -164,9 +177,10 @@ python -m unittest discover -s tests -t .
 La libreria è uno specchio delle regole di `EasyGANTT.js` e di
 `algorithm2.js`. Se cambiano `normalizeState`, `limitaStart`, `limitaDurata`,
 `limitaIncertezza`, il motore (`insertProject`, ferie, capacità, `start`,
-coda di incertezza, `calcProjecDelay`) o il formato dell'export HTML, vanno
-aggiornati `easygantt.py`, `easygantt_engine.py`, gli schemi, il prompt e i
-test.
+coda di incertezza, `calcProjecDelay`), il fantasma
+(`costruisci_gantt_ombra`, `fine_fase_base`, `build_ghost_results`) o il
+formato dell'export HTML, vanno aggiornati `easygantt.py`,
+`easygantt_engine.py`, gli schemi, il prompt e i test.
 
 I test di parità in `tests/test_easygantt.py` contengono i valori prodotti dal
 motore JS sull'esempio: sono la rete di sicurezza minima. I test di round-trip
