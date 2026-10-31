@@ -38,7 +38,7 @@ if (STATO_INCORPORATO) {
     setResources = STATO_INCORPORATO.setResources
 }
 
-const VERSION = {"major":0, "minor":5, "patch":1}
+const VERSION = {"major":0, "minor":6, "patch":0}
 // Documenti per il ciclo con la chat. Dopo il merge del branch passare a
 // "main"; il link finisce nei metadati del JSON copiato/esportato.
 const LLM_DOCS_BASE = 'https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/'

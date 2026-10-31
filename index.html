@@ -28,7 +28,7 @@
         <button class="btn btn-light" onclick="downloadData()">
             <i class="bi bi-download"></i>
             <span id="downloadLabel">Download data</span></button>
-        <button class="btn btn-light" onclick="openAiConnect()" title="Copy project data for your AI, or paste the AI answer"
+        <button class="btn btn-danger no-wrap" onclick="openAiConnect()" title="Copy project data for your AI, or paste the AI answer"
                 aria-haspopup="dialog" aria-controls="aiConnectModal">
             <i class="bi bi-robot"></i> AI connect</button>
         <button class="btn btn-light" onclick="undo()">
@@ -408,10 +408,8 @@
             </div>
             <p class="ai-connect-step"><strong>2.</strong> Paste it into your
                 AI chat and ask it to run the simulation.</p>
-            <p class="ai-connect-step"><strong>3.</strong> Paste the AI's
-                updated project here and Apply. Only <code>meta</code>,
-                <code>data</code> and <code>setResources</code> are used;
-                other fields are ignored.</p>
+            <p class="ai-connect-step"><strong>3.</strong> Paste the result
+                here, then click Apply.</p>
             <textarea id="aiConnectText" spellcheck="false"
                 placeholder='{"meta": {...}, "data": [...], "setResources": [...]}'></textarea>
             <p class="ai-connect-tip">Tip: you can also press Ctrl+V anywhere

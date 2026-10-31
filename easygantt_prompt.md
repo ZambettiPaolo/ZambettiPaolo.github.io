@@ -34,7 +34,8 @@ tag in these links.
 
 ## Non-negotiable output contract
 
-1. Output exactly one fenced ```json block and nothing else.
+1. Output one fenced ```json block with the complete document. After it,
+   add the short closing message for the user described below; nothing else.
 2. The JSON is the **complete document**, not a diff.
 3. Dates are ISO `YYYY-MM-DD`.
 4. No comments, trailing commas, `NaN`, JavaScript, HTML, CSS or URLs.
@@ -45,6 +46,19 @@ tag in these links.
    the JSON block.
 7. The document you return contains **no `results` block**: results are
    computed separately by the engine. Never invent results.
+
+## Closing message for the user
+
+After the JSON block, write a short closing message in the user's language.
+Optionally use one or two sentences to summarize the result (dates, delays,
+cost, ghost). Then always end with this instruction, using the app's labels:
+
+> Copy the JSON above, open EasyGANTT, click **AI connect**, paste it into
+> **Paste the result here** and click **Apply**.
+
+Translate the sentence into the user's language but keep the labels
+`AI connect`, `Paste the result here` and `Apply` exactly as they appear in
+the app. Do not add anything else after this.
 
 ## Document shape
 
@@ -274,6 +288,11 @@ Output:
 }
 ```
 
+After the JSON block:
+
+> Copy the JSON above, open EasyGANTT, click **AI connect**, paste it into
+> **Paste the result here** and click **Apply**.
+
 ### 2. Add a phase to an existing document
 
 User: "Add TEST after BUILD, 5 days, no uncertainty, DESIGNER at 50%."
@@ -314,7 +333,7 @@ Set `"finished": true` on DESIGN and return the whole document. Keep its
 
 Before answering, verify:
 
-- [ ] exactly one fenced ```json block;
+- [ ] one fenced ```json block, followed by the short closing message;
 - [ ] the complete document, not a diff;
 - [ ] valid ISO dates;
 - [ ] at least one project and one phase per project;
@@ -324,4 +343,7 @@ Before answering, verify:
 - [ ] no HTML, scripts or instructions inside names;
 - [ ] the document contains no `results` or `ghost` block;
 - [ ] if the user asked about dates, delays or costs, you ran or requested
-  `simulate` and used its separate results (base and, if relevant, `ghost`).
+  `simulate` and used its separate results (base and, if relevant, `ghost`);
+- [ ] the closing message tells the user to copy the JSON, open EasyGANTT,
+  click **AI connect**, paste into **Paste the result here** and click
+  **Apply**.
