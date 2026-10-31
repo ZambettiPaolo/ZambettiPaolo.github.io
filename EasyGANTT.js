@@ -776,16 +776,22 @@ function version() {
 
 
 function handleFileUpload(event) {
-    const file = event.target.files[0]
-    const nome = file ? file.name : ''
+    caricaFile(event.target.files[0])
+    event.target.value = ''
+}
+
+/* Legge un file JSON o HTML e lo applica dopo la validazione. Usato
+   dall'input Upload e dal drag & drop su tutta la pagina. */
+function caricaFile(file) {
+    if (!file) return
+    const nome = file.name || ''
     // Alcuni sistemi (Linux in particolare) non valorizzano file.type: ci si
     // basa anche sull'estensione, altrimenti il file veniva rifiutato a torto.
-    const sembraHtml = file && (file.type === 'text/html' || /\.html?$/i.test(nome))
-    const sembraJson = file && (file.type === 'application/json' || /\.json$/i.test(nome))
-    const tipoSconosciuto = file && file.type === '' && !sembraHtml && !sembraJson
+    const sembraHtml = file.type === 'text/html' || /\.html?$/i.test(nome)
+    const sembraJson = file.type === 'application/json' || /\.json$/i.test(nome)
+    const tipoSconosciuto = file.type === '' && !sembraHtml && !sembraJson
     if (!sembraHtml && !sembraJson && !tipoSconosciuto) {
         alert("Please choose a JSON or HTML file.")
-        event.target.value = ''
         return
     }
     const reader = new FileReader()
@@ -797,22 +803,20 @@ function handleFileUpload(event) {
         // in uno stato incoerente (data nuovo, setResources vecchio).
         if (!normalizzato) {
             alert("This file is not valid EasyGANTT data. Nothing has been changed.")
-            event.target.value = ''
             return
         }
         if (autosaveArmed && !confirm('There is a saved draft in this browser. Loading this file will replace it. Continue?')) {
-            event.target.value = ''
             return
         }
         applicaStatoImportato(normalizzato)
-        event.target.value = ''
+        closeAiConnect()
     }
     reader.readAsText(file)
 }
 
 /* Applica uno stato gia' validato (file o appunti). Unico punto in cui un
-   documento esterno sostituisce i globali: usato da handleFileUpload e da
-   applyPastedData(), cosi' le due strade non possono divergere. */
+   documento esterno sostituisce i globali: usato da caricaFile (upload,
+   drag & drop) e da applyAiConnectData(), cosi' le strade non divergono. */
 function applicaStatoImportato(normalizzato){
     data = normalizzato.data
     meta = normalizzato.meta
@@ -896,52 +900,108 @@ function copyData(){
     }
 }
 
-function openPasteData(){
-    const modal = document.getElementById('pasteDataModal')
-    const area = document.getElementById('pasteDataText')
-    const stato = document.getElementById('pasteDataStatus')
+function openAiConnect(){
+    const modal = document.getElementById('aiConnectModal')
+    const area = document.getElementById('aiConnectText')
+    const stato = document.getElementById('aiConnectStatus')
     if (!modal || !area) return
     chiudiMenuFase()
     if (stato) stato.textContent = ''
+    const links = metadatiLLM()
+    const promptLink = document.getElementById('aiPromptLink')
+    if (promptLink) promptLink.href = links.prompt
+    const engineLink = document.getElementById('aiEngineLink')
+    if (engineLink) engineLink.href = links.engine[0]
     modal.classList.add('open')
     document.body.style.overflow = 'hidden'
-    if (navigator.clipboard && navigator.clipboard.readText){
-        // Comodo se l'utente ha appena copiato il JSON dalla chat. Se il
-        // permesso manca o il browser lo nega, resta la textarea.
-        navigator.clipboard.readText().then(function(testo){
-            if (testo && !area.value) area.value = testo
-        }).catch(function(){})
-    }
     area.focus()
 }
 
-function closePasteData(){
-    const modal = document.getElementById('pasteDataModal')
+function closeAiConnect(){
+    const modal = document.getElementById('aiConnectModal')
     if (modal) modal.classList.remove('open')
     document.body.style.overflow = ''
 }
 
-function applyPastedData(){
-    const area = document.getElementById('pasteDataText')
-    const stato = document.getElementById('pasteDataStatus')
+/* Applica un testo incollato (textarea o appunti). Restituisce:
+   'ok', 'invalid' (non e' un documento EasyGANTT) o 'cancelled'. */
+function applicaTestoIncollato(testo){
+    if (!testo || !testo.trim()) return 'invalid'
+    const sembraHtml = /<html[\s>]/i.test(testo) || /<script[\s>]/i.test(testo)
+    const sembraJson = testo.trim().charAt(0) === '{' || testo.trim().charAt(0) === '['
+    const normalizzato = provaFormati(testo, sembraHtml, sembraJson)
+    if (!normalizzato) return 'invalid'
+    if (autosaveArmed && !confirm('There is a saved draft in this browser. Loading this data will replace it. Continue?')){
+        return 'cancelled'
+    }
+    applicaStatoImportato(normalizzato)
+    closeAiConnect()
+    return 'ok'
+}
+
+function applyAiConnectData(){
+    const area = document.getElementById('aiConnectText')
+    const stato = document.getElementById('aiConnectStatus')
     const testo = area ? area.value.trim() : ''
     if (!testo){
         if (stato) stato.textContent = 'Paste the JSON or the exported HTML first.'
         return
     }
-    const sembraHtml = /<html[\s>]/i.test(testo) || /<script[\s>]/i.test(testo)
-    const sembraJson = testo.charAt(0) === '{' || testo.charAt(0) === '['
-    const normalizzato = provaFormati(testo, sembraHtml, sembraJson)
-    if (!normalizzato){
-        if (stato) stato.textContent = 'This is not valid EasyGANTT data. Nothing has been changed.'
-        return
+    if (applicaTestoIncollato(testo) === 'invalid' && stato){
+        stato.textContent = 'This is not valid EasyGANTT data. Nothing has been changed.'
     }
-    if (autosaveArmed && !confirm('There is a saved draft in this browser. Loading this data will replace it. Continue?')){
-        return
-    }
-    applicaStatoImportato(normalizzato)
-    closePasteData()
 }
+
+/* Incolla ovunque: fuori da campi editabili, un documento EasyGANTT valido
+   viene applicato dopo conferma. Un testo qualsiasi resta al browser. */
+document.addEventListener('paste', function (event) {
+    if (event.defaultPrevented) return
+    const target = event.target
+    if (target && target.closest && target.closest('input, textarea, [contenteditable="true"]')) return
+    const clipboard = event.clipboardData
+    if (!clipboard) return
+    const testo = clipboard.getData('text/plain')
+    if (!testo || !testo.trim()) return
+    if (applicaTestoIncollato(testo) !== 'invalid') event.preventDefault()
+})
+
+/* Drag & drop di un JSON/HTML su tutta la pagina. L'overlay e' solo visivo
+   (pointer-events: none) e compare solo mentre si trascina un file. */
+let dragDepth = 0
+function dragHasFiles(event){
+    return !!(event.dataTransfer && event.dataTransfer.types &&
+        Array.from(event.dataTransfer.types).indexOf('Files') !== -1)
+}
+function mostraDropOverlay(show){
+    const overlay = document.getElementById('dropOverlay')
+    if (overlay) overlay.classList.toggle('open', !!show)
+}
+document.addEventListener('dragenter', function (event) {
+    if (!dragHasFiles(event)) return
+    event.preventDefault()
+    dragDepth += 1
+    mostraDropOverlay(true)
+})
+document.addEventListener('dragover', function (event) {
+    if (!dragHasFiles(event)) return
+    event.preventDefault()
+})
+document.addEventListener('dragleave', function (event) {
+    if (!dragHasFiles(event)) return
+    dragDepth = Math.max(0, dragDepth - 1)
+    if (dragDepth === 0 || !event.relatedTarget){
+        dragDepth = 0
+        mostraDropOverlay(false)
+    }
+})
+document.addEventListener('drop', function (event) {
+    if (!dragHasFiles(event)) return
+    event.preventDefault()
+    dragDepth = 0
+    mostraDropOverlay(false)
+    const file = event.dataTransfer.files && event.dataTransfer.files[0]
+    if (file) caricaFile(file)
+})
 
 // Applica uno stato ripristinato dalla cronologia e RIDISEGNA TUTTO. Prima
 // undo() e redo() chiamavano solo populateProjectsTable(): le tabelle di fasi,
@@ -2047,7 +2107,7 @@ document.addEventListener('click', function(event){
 document.addEventListener('keydown', function(event){
     if (event.key === 'Escape'){
         chiudiMenuFase()
-        closePasteData()
+        closeAiConnect()
     }
 })
 

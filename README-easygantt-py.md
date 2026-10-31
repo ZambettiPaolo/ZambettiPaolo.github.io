@@ -120,6 +120,11 @@ open("progetto.html", "w", encoding="utf-8").write(html)
 8. Per modificare: la chat restituisce solo il documento aggiornato (`meta`,
    `data`, `setResources`), senza risultati; ripeti dal punto 3.
 
+Nell'app il ciclo è il pannello **AI connect**: "Copy data" copia il JSON,
+"Apply" applica la risposta dell'AI. Ctrl+V fuori dai campi applica
+direttamente un documento EasyGANTT valido; il drag & drop di un `.json` o
+`.html` fa lo stesso.
+
 Se la chat ha un code interpreter, può scaricare il motore ed eseguire lei
 `simulate` nel suo ambiente: il ciclo diventa automatico. Se non ce l'ha,
 l'utente esegue i comandi tra un messaggio e l'altro.
