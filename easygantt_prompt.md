@@ -17,8 +17,8 @@ The JSON you receive contains an `llm` block **first**: `instructions`,
 Download the two Python files from the official repository into the same
 directory:
 
-- https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/easygantt.py
-- https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/easygantt_engine.py
+- https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/v0.6.0/easygantt.py
+- https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/v0.6.0/easygantt_engine.py
 
 Then run:
 
@@ -34,8 +34,9 @@ If you cannot download the files, ask the user to attach `easygantt.py` and
 `easygantt_engine.py`; do not try to reimplement the engine. The Python uses
 only the standard library (Python 3.10+).
 
-After the branch is merged, replace `feature/easygantt-py` with `main` or a
-tag in these links.
+These links are pinned to the `v0.6.0` release tag. Do not replace them with
+a branch or `main`: an agent must execute the exact released code. The tag
+is moved to this commit at release and must not be moved afterwards.
 
 ## Non-negotiable output contract
 

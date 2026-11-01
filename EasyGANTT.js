@@ -41,7 +41,10 @@ if (STATO_INCORPORATO) {
 const VERSION = {"major":0, "minor":6, "patch":0}
 // Documenti per il ciclo con la chat. Dopo il merge del branch passare a
 // "main"; il link finisce nei metadati del JSON copiato/esportato.
-const LLM_DOCS_BASE = 'https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/feature/easygantt-py/'
+// Pinnato al tag di release: un agente deve scaricare il codice esatto
+// rilasciato, non un ramo mobile. Il tag viene spostato su questo commit
+// in fase di release; non usare main o un branch.
+const LLM_DOCS_BASE = 'https://raw.githubusercontent.com/ZambettiPaolo/ZambettiPaolo.github.io/v0.6.0/'
 // Testo del prompt per l'LLM, scaricato una volta all'avvio. CORS e' aperto
 // su raw.githubusercontent.com; se la fetch fallisce resta il link.
 var llmPromptText = null
