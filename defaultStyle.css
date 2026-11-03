@@ -738,21 +738,33 @@ select{
 
 /* Pannello AI connect */
 .ai-connect-box {
+    width: min(620px, 100%);
     max-height: 92vh;
     overflow: auto;
 }
 .ai-connect-box textarea {
-    min-height: 28vh;
+    min-height: 18vh;
 }
 .ai-connect-step {
     margin: 0 0 6px;
 }
-.ai-connect-copy {
+/* Due pulsanti affiancati e della stessa larghezza, con lo stato sotto
+   ciascuno. */
+.ai-connect-actions {
     display: flex;
-    align-items: center;
-    gap: 10px;
     flex-wrap: wrap;
+    gap: 10px;
     margin: 6px 0 10px;
+}
+.ai-connect-action {
+    flex: 1 1 160px;
+    min-width: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ai-copy-button {
+    width: 100%;
 }
 .ai-connect-status {
     font-size: 13px;
@@ -761,13 +773,43 @@ select{
 .ai-connect-status.warn {
     color: #b00020;
 }
-.ai-connect-links {
-    margin-left: auto;
-    font-size: 13px;
+/* Zona di incolla: il suggerimento sta sopra la textarea, lascia passare i
+   click e si attiva (colore piu' scuro) al passaggio del mouse. Sparisce
+   quando il campo riceve il focus o contiene del testo. */
+.ai-paste-zone {
+    position: relative;
 }
-.ai-connect-links a {
-    color: #0056b3;
-    text-decoration: underline;
+.ai-paste-zone textarea {
+    display: block;
+}
+.ai-paste-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px dashed #d6d6d6;
+    border-radius: 4px;
+    background: #fff;
+    color: #c2c2c2;
+    font-size: 15px;
+    pointer-events: none;
+    transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.ai-paste-hint i {
+    font-size: 2.6rem;
+    line-height: 1;
+}
+.ai-paste-zone:hover .ai-paste-hint {
+    color: #7a7a7a;
+    border-color: #a8a8a8;
+    background: #fafafa;
+}
+.ai-paste-zone:focus-within .ai-paste-hint,
+.ai-paste-zone.has-text .ai-paste-hint {
+    display: none;
 }
 .ai-connect-tip {
     margin: 6px 0 0;

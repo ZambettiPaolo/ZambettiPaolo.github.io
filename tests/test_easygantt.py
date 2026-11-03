@@ -141,11 +141,17 @@ class NormalizeTests(unittest.TestCase):
 
     def test_llm_metadata_is_ignored(self):
         raw = esempio()
+        # Formato legacy: il blocco era alla radice e, prima ancora, in meta.
+        raw["llm"] = {
+            "instructions": "ignored",
+            "prompt_text": "ignored",
+        }
         raw["meta"]["llm"] = {
             "prompt": "https://example.invalid/easygantt_prompt.md",
             "engine": ["https://example.invalid/easygantt.py"],
         }
         state = eg.normalize_state(raw)
+        self.assertNotIn("llm", state)
         self.assertNotIn("llm", state["meta"])
         # Il resto dello stato resta valido e simulabile; i risultati sono
         # separati dal documento.

@@ -63,21 +63,21 @@ lavorativi); per ogni progetto `baseFinish`, `finish`, ritardi e costo.
 La coda usa lo stesso impiego della fase base (versione "full effort").
 `--today` rende il calcolo deterministico; senza, usa la data corrente.
 
-Il documento del progetto resta `meta`, `data`, `setResources` (più il blocco
-`llm`, che l'app e la libreria ignorano). Se l'input cambia, i risultati
-sono obsoleti: rilancia `simulate`; `inputHash` serve a accorgersene.
+Il documento del progetto resta `meta`, `data`, `setResources`. Gli export
+scaricati dall'app possono includere `meta.version`, che la libreria ignora;
+il JSON copiato per la chat no. Se l'input cambia, i risultati sono obsoleti:
+rilancia `simulate`; `inputHash` serve a accorgersene.
 
-L'app aggiunge al JSON copiato/esportato un blocco `llm` **in testa** con
-istruzioni imperative, il testo completo del prompt (scaricato da
-`easygantt_prompt.md`; CORS è aperto su raw.githubusercontent.com), i link ai
-sorgenti, gli schemi e il comando `simulate`. `normalize_state` lo ignora,
-quindi non entra nello stato né nei risultati: serve all'LLM per leggere le
-istruzioni senza aprire un link. Se la fetch del prompt fallisce, resta il
-link e il pannello lo segnala con "Instructions link only".
+Le istruzioni per l'LLM non stanno più nel JSON: il pannello **AI connect**
+le copia con il pulsante **AI instructions**, insieme ai due sorgenti Python,
+scaricati da `easygantt_prompt.md`, `easygantt.py` e `easygantt_engine.py`
+(CORS è aperto su raw.githubusercontent.com). L'utente incolla dati e
+istruzioni nella stessa chat. L'app non aggiunge più il blocco `llm` a JSON
+ed HTML; i file delle versioni precedenti che lo contengono vengono comunque
+accettati e il blocco viene ignorato.
 
-Nella risposta l'LLM può omettere `llm` e `meta.version`: l'app li reinietta
-all'esportazione. Il prompt lo dichiara, così non deve ripetere ~10 KB di
-`prompt_text` a ogni modifica.
+Il prompt non menziona più `llm` né `meta.version`: la risposta dell'LLM
+contiene solo il documento del progetto.
 
 `build` usa come template l'`index.html` accanto a `easygantt.py`. Il file
 generato carica CSS e script da `https://easygantt.net/`; per un uso offline
@@ -127,14 +127,22 @@ open("progetto.html", "w", encoding="utf-8").write(html)
 8. Per modificare: la chat restituisce solo il documento aggiornato (`meta`,
    `data`, `setResources`), senza risultati; ripeti dal punto 3.
 
-Nell'app il ciclo è il pannello **AI connect**: "Copy data" copia il JSON,
-"Apply" applica la risposta dell'AI. Ctrl+V fuori dai campi applica
-direttamente un documento EasyGANTT valido; il drag & drop di un `.json` o
-`.html` fa lo stesso.
+Nell'app il ciclo è il pannello **AI connect**: "my data" copia il JSON,
+"AI instructions" copia in un unico testo il prompt e i sorgenti di
+`easygantt.py` e `easygantt_engine.py`, delimitati dai marcatori
+`# ===== Instructions: easygantt_prompt.md =====`,
+`# ===== File 1 of 2: easygantt.py =====` e
+`# ===== File 2 of 2: easygantt_engine.py =====`, e "Apply" applica la
+risposta dell'AI. Il secondo pulsante serve alle chat che non possono
+scaricare da GitHub: l'utente incolla istruzioni e sorgenti nella stessa
+conversazione dei dati. Ctrl+V fuori dai campi applica direttamente un
+documento EasyGANTT valido; il drag & drop di un `.json` o `.html` fa lo
+stesso.
 
-Se la chat ha un code interpreter, può scaricare il motore ed eseguire lei
-`simulate` nel suo ambiente: il ciclo diventa automatico. Se non ce l'ha,
-l'utente esegue i comandi tra un messaggio e l'altro.
+Se la chat ha un code interpreter, può scaricare il motore (oppure usare
+quello incollato con "AI instructions") ed eseguire lei `simulate` nel suo
+ambiente: il ciclo diventa automatico. Se non ce l'ha, l'utente esegue i
+comandi tra un messaggio e l'altro.
 
 La chat non apre file locali da sola: l'utente passa il JSON. Il documento
 scambiato è solo input; i risultati sono un file di lavoro separato, così non
