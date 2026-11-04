@@ -54,6 +54,42 @@ h4{
 .auto{
     margin: 0 auto;
 }
+
+/* I tre pannelli (Progetti/Fasi/Risorse) restano su una riga e si spostano
+   insieme: un'unica scrollbar sul contenitore, nessuno scroll interno alle
+   tabelle, cosi' ogni pannello resta completo di tutti i widget. */
+html, body {
+    /* Le righe Bootstrap hanno margini negativi: senza questo, la barra fissa
+       aggiunge ~15px di scroll orizzontale di pagina. Lo scroll interno del
+       contenitore dei pannelli resta attivo. */
+    overflow-x: hidden;
+}
+.panels-container {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;           /* unica scrollbar: trasla tutta la riga */
+}
+.panels-row {
+    flex-wrap: nowrap;
+    width: 100%;
+}
+.table-container {
+    display: block;             /* era una .row flex */
+    width: 100%;
+    overflow: visible;          /* la tabella resta completa nel pannello */
+}
+@media print {
+    .panels-container { overflow: visible; }
+}
+
+/* La barra fissa non ha un .container che compensi i margini negativi delle
+   .row: senza questo, le righe sporgono di 15px e nasce uno scroll orizzontale
+   di pagina. */
+#dashboard .row {
+    margin-left: 0;
+    margin-right: 0;
+}
 .selected1 {
     background-color: #007bff;
 }
