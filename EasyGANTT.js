@@ -794,6 +794,118 @@ function compensaBarraFissa(){
     document.documentElement.style.setProperty('--dashboard-height', altezzaBarra + 'px')
 }
 
+/* ---------------------------------------------------------------------------
+   Fit a tre livelli dei pannelli Progetti/Fasi/Risorse.
+
+   1. la riga naturale ci sta: nessuno zoom, centrata;
+   2. non ci sta, ma a 0.8 si': zoom fra 0.8 e 1, nessuno scroll;
+   3. non ci sta nemmeno a 0.8: zoom 0.8 e unica scrollbar sul contenitore.
+
+   Le tabelle non hanno scroll interno: l'unica scrollbar e' quella del
+   .panels-container, che trasla tutta la riga.
+--------------------------------------------------------------------------- */
+
+const PANEL_FIT_MIN = 0.8
+let fitTimer = 0
+let panelFitResizeObserver = null
+let panelFitMutationObserver = null
+const ultimaLarghezzaPannelli = new WeakMap()
+
+function supportaZoomCss(){
+    return typeof CSS !== 'undefined' && CSS.supports && CSS.supports('zoom', '1')
+}
+
+function applicaFitPanelli(){
+    // Firefox <126 (e browser senza zoom CSS): la riga resta naturale e,
+    // se non ci sta, si usa l'unica scrollbar del contenitore.
+    if (!supportaZoomCss()) return
+
+    document.querySelectorAll('.panels-row').forEach(function (riga) {
+        riga.classList.remove('is-fit')
+        riga.style.removeProperty('--panel-fit-scale')
+
+        // La riga ha width:max-content e le colonne non crescono: scrollWidth
+        // e' la larghezza naturale completa dei tre pannelli.
+        const richiesto = riga.scrollWidth
+        const sezione = riga.closest('.panels-container')
+        if (!sezione) return
+        const riferimento = sezione.parentElement
+        if (!riferimento) return
+
+        // La sezione ha width:fit-content (abbraccia la riga): lo spazio
+        // disponibile va letto dal genitore, non dalla sezione stessa.
+        const stRif = getComputedStyle(riferimento)
+        const stSez = getComputedStyle(sezione)
+        const disponibile = riferimento.clientWidth
+            - (parseFloat(stRif.paddingLeft) || 0)
+            - (parseFloat(stRif.paddingRight) || 0)
+            - (parseFloat(stSez.paddingLeft) || 0)
+            - (parseFloat(stSez.paddingRight) || 0)
+            - 2
+
+        if (richiesto > disponibile + 1){
+            const rapporto = disponibile / richiesto
+            const scala = Math.max(PANEL_FIT_MIN, Math.min(1, rapporto))
+            if (scala < 0.999){
+                riga.style.setProperty('--panel-fit-scale', scala.toFixed(4))
+                riga.classList.add('is-fit')
+            }
+        }
+    })
+
+    // Lo zoom puo' cambiare altezza e quindi la barra fissa.
+    compensaBarraFissa()
+}
+
+function programmaFitPanelli(){
+    clearTimeout(fitTimer)
+    fitTimer = setTimeout(function () {
+        requestAnimationFrame(applicaFitPanelli)
+    }, 120)
+}
+
+/* Gli observer si agganciano dopo il DOM: EasyGANTT.js e' caricato nell'head. */
+function osservaPannelli(){
+    const contenitori = document.querySelectorAll('.panels-container')
+    if (!contenitori.length) return
+
+    if ('ResizeObserver' in window && !panelFitResizeObserver){
+        panelFitResizeObserver = new ResizeObserver(function (voci) {
+            let cambiata = false
+            voci.forEach(function (voce) {
+                const larghezza = Math.round(voce.contentRect.width)
+                if (ultimaLarghezzaPannelli.get(voce.target) !== larghezza){
+                    ultimaLarghezzaPannelli.set(voce.target, larghezza)
+                    cambiata = true
+                }
+            })
+            if (cambiata) programmaFitPanelli()
+        })
+    }
+    if (panelFitResizeObserver){
+        contenitori.forEach(function (c) { panelFitResizeObserver.observe(c) })
+    }
+
+    if ('MutationObserver' in window && !panelFitMutationObserver){
+        panelFitMutationObserver = new MutationObserver(programmaFitPanelli)
+    }
+    if (panelFitMutationObserver){
+        contenitori.forEach(function (c) {
+            panelFitMutationObserver.observe(c, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            })
+        })
+    }
+}
+
+window.addEventListener('load', function () {
+    osservaPannelli()
+    programmaFitPanelli()
+})
+window.addEventListener('resize', programmaFitPanelli)
+
 // La barra in alto e' fissa (position: fixed): senza sottrarne l'altezza il
 // titolo della sezione finirebbe sotto la barra. L'altezza si misura al momento
 // del clic perche' i pulsanti vanno a capo quando la finestra si restringe.

@@ -65,21 +65,35 @@ html, body {
     overflow-x: hidden;
 }
 .panels-container {
-    width: 100%;
+    width: fit-content;         /* il contenitore abbraccia la riga, non lo schermo */
     max-width: 100%;
     box-sizing: border-box;
     overflow-x: auto;           /* unica scrollbar: trasla tutta la riga */
 }
 .panels-row {
     flex-wrap: nowrap;
-    width: 100%;
+    width: max-content;         /* larghezza naturale dei tre pannelli */
+    margin: 0 auto;             /* centrata quando c'e' spazio */
+}
+.panels-row > .col {
+    flex: 0 0 auto;             /* i pannelli non si allargano per riempire */
+    width: min-content;         /* larghezza naturale dei widget, senza spazi vuoti */
 }
 .table-container {
     display: block;             /* era una .row flex */
     width: 100%;
     overflow: visible;          /* la tabella resta completa nel pannello */
 }
+.table-container table {
+    width: auto;                /* larghezza naturale dei widget, non 100% */
+}
+/* Solo quando la riga non ci sta: zoom fra 0.8 e 1. Se nemmeno a 0.8 entra,
+   resta lo scroll del .panels-container. */
+.panels-row.is-fit {
+    zoom: var(--panel-fit-scale, 1);
+}
 @media print {
+    .panels-row.is-fit { zoom: 1 !important; }
     .panels-container { overflow: visible; }
 }
 
