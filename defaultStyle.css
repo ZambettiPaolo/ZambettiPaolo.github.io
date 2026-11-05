@@ -182,6 +182,16 @@ html, body {
 #resourcesTable tbody th {
     border-top: 0;
 }
+/* Tabelle delle risorse: il testo non va a capo. Con i pannelli a
+   width: min-content la colonna si fermava alla parola piu' lunga, quindi
+   "Employed %" e i nomi con uno spazio ("PURCHASING OFFI") si spezzavano.
+   nowrap alza la min-content della colonna alla larghezza naturale del testo,
+   cosi' la tabella (e il pannello) si allargano quanto serve. */
+#resourcesTable th,
+#resourcemanager th,
+#resourcemanager td {
+    white-space: nowrap;
+}
 /* Triangolo dell'ancora: sempre presente, invisibile finche' la fase
    selezionata non punta a quella riga. Sinistra = inizio, destra = fine. */
 #phasesTable td.descrizione-fase {
